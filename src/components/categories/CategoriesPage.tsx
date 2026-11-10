@@ -826,7 +826,7 @@ export default function CategoriesPage() {
                 "
                 style={{
                   backgroundImage:
-                    "url('/images/categories/category-hero.png')",
+                    "url('/images/categories/category-hero.webp')",
                 }}
               />
 

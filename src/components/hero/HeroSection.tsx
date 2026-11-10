@@ -131,7 +131,7 @@ export default function HeroSection() {
         "
         style={{
           backgroundImage:
-            "url('/images/hero/hero-festival-waves.png')",
+            "url('/images/hero/hero-festival-waves.webp')",
         }}
       />
 

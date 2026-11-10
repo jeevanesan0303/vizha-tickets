@@ -135,7 +135,7 @@ export default function AboutPage() {
 
         <div className="pointer-events-none absolute inset-0 z-0">
           <Image
-            src="/images/about/about-hero.png"
+            src="/images/about/about-hero.webp"
             alt=""
             fill
             priority

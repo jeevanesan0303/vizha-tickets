@@ -658,7 +658,7 @@ function EventsContent({
 
         <div className="pointer-events-none absolute inset-0 z-0">
           <img
-            src="/images/events/events-hero.png"
+            src="/images/events/events-hero.webp"
             alt=""
             draggable={false}
             className="h-full w-full object-cover object-[65%_center] sm:object-[60%_center] lg:object-center"
