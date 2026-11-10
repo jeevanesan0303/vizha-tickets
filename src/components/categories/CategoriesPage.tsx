@@ -3,15 +3,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
+
 import {
   useState,
   type FormEvent,
 } from "react";
+
 import { useRouter } from "next/navigation";
+
 import {
   motion,
   useReducedMotion,
 } from "framer-motion";
+
 import {
   ArrowRight,
   CalendarDays,
@@ -30,7 +34,29 @@ import {
 } from "lucide-react";
 
 /* ==========================================================
-   VIZHA TICKETS - CATEGORY CONFIGURATION
+   VIZHATICKETS — CATEGORIES PAGE
+
+   React + Vite + TypeScript
+
+   CORRECTIONS:
+   ----------------------------------------------------------
+   - Completely removed the hero tagline overlay
+   - Removed the empty cream box
+   - Removed the tagline's decorative lines
+   - Original hero artwork preserved
+   - No text or floating card covering the artwork
+   - Original premium cream/orange styling preserved
+   - Search functionality preserved
+   - Location and date filters preserved
+   - All 8 category cards preserved
+   - Category navigation preserved
+   - Responsive layout preserved
+   - Framer Motion animations preserved
+
+   ========================================================== */
+
+/* ==========================================================
+   CATEGORY TYPES
    ========================================================== */
 
 interface CategoryItem {
@@ -43,6 +69,14 @@ interface CategoryItem {
   size: "large" | "medium" | "small";
   imagePosition: string;
 }
+
+/* ==========================================================
+   CATEGORY DATA
+
+   All existing category names, slugs, icons,
+   descriptions, colors, and image paths preserved.
+
+   ========================================================== */
 
 const categories: CategoryItem[] = [
   {
@@ -127,6 +161,10 @@ const categories: CategoryItem[] = [
   },
 ];
 
+/* ==========================================================
+   SEARCH LOCATION OPTIONS
+   ========================================================== */
+
 const locations = [
   "Worldwide",
   "Sri Lanka",
@@ -140,16 +178,35 @@ const locations = [
   "United Arab Emirates",
 ];
 
+/* ==========================================================
+   DATE FILTER OPTIONS
+   ========================================================== */
+
 const dateOptions = [
-  { label: "Any Date", value: "" },
-  { label: "Today", value: "today" },
-  { label: "This Weekend", value: "this-weekend" },
-  { label: "This Week", value: "this-week" },
-  { label: "This Month", value: "this-month" },
+  {
+    label: "Any Date",
+    value: "",
+  },
+  {
+    label: "Today",
+    value: "today",
+  },
+  {
+    label: "This Weekend",
+    value: "this-weekend",
+  },
+  {
+    label: "This Week",
+    value: "this-week",
+  },
+  {
+    label: "This Month",
+    value: "this-month",
+  },
 ];
 
 /* ==========================================================
-   INDIVIDUAL CATEGORY CARD
+   CATEGORY CARD
    ========================================================== */
 
 interface CategoryTileProps {
@@ -165,16 +222,22 @@ function CategoryTile({
 }: CategoryTileProps) {
   const Icon = category.icon;
 
-  const large = category.size === "large";
+  const isLarge = category.size === "large";
 
   return (
     <motion.div
       initial={
         reducedMotion
           ? false
-          : { opacity: 0, y: 20 }
+          : {
+              opacity: 0,
+              y: 20,
+            }
       }
-      whileInView={{ opacity: 1, y: 0 }}
+      whileInView={{
+        opacity: 1,
+        y: 0,
+      }}
       viewport={{
         once: true,
         amount: 0.15,
@@ -187,7 +250,9 @@ function CategoryTile({
         ease: "easeOut",
       }}
       className={`min-w-0 ${
-        large ? "lg:col-span-2" : "lg:col-span-1"
+        isLarge
+          ? "lg:col-span-2"
+          : "lg:col-span-1"
       }`}
     >
       <Link
@@ -219,7 +284,9 @@ function CategoryTile({
           xl:h-73.75
         "
       >
-        {/* CATEGORY IMAGE */}
+        {/* ================================================
+            CATEGORY IMAGE
+            ================================================ */}
 
         <Image
           src={category.image}
@@ -228,7 +295,7 @@ function CategoryTile({
           priority={index === 0}
           loading={index === 0 ? undefined : "lazy"}
           sizes={
-            large
+            isLarge
               ? "(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1399px) 50vw, 45vw"
               : "(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 25vw"
           }
@@ -244,7 +311,9 @@ function CategoryTile({
           "
         />
 
-        {/* IMAGE GRADIENT */}
+        {/* ================================================
+            IMAGE READABILITY GRADIENT
+            ================================================ */}
 
         <div
           aria-hidden="true"
@@ -259,7 +328,9 @@ function CategoryTile({
           "
         />
 
-        {/* HOVER LIGHT */}
+        {/* ================================================
+            HOVER LIGHT
+            ================================================ */}
 
         <div
           aria-hidden="true"
@@ -274,7 +345,9 @@ function CategoryTile({
           "
         />
 
-        {/* TOP CORNER ACCENT */}
+        {/* ================================================
+            TOP CORNER ACCENT
+            ================================================ */}
 
         <div
           aria-hidden="true"
@@ -294,7 +367,9 @@ function CategoryTile({
           }}
         />
 
-        {/* CATEGORY DETAILS */}
+        {/* ================================================
+            CATEGORY DETAILS
+            ================================================ */}
 
         <div
           className="
@@ -344,7 +419,7 @@ function CategoryTile({
               />
             </div>
 
-            {/* CATEGORY TEXT */}
+            {/* CATEGORY NAME & DESCRIPTION */}
 
             <div className="min-w-0 flex-1">
               <h3
@@ -352,7 +427,7 @@ function CategoryTile({
                   font-serif
                   text-[20px]
                   font-bold
-                  leading-[1.15]
+                  leading-[1.2]
                   tracking-tight
                   text-white
                   sm:text-[23px]
@@ -367,7 +442,7 @@ function CategoryTile({
                   mt-1.5
                   max-w-70
                   text-[11px]
-                  leading-[1.45]
+                  leading-normal
                   text-white/85
                   sm:text-[12px]
                 "
@@ -377,7 +452,7 @@ function CategoryTile({
             </div>
           </div>
 
-          {/* ARROW */}
+          {/* CATEGORY ARROW */}
 
           <span
             aria-hidden="true"
@@ -415,7 +490,9 @@ function CategoryTile({
           </span>
         </div>
 
-        {/* BOTTOM ACCENT */}
+        {/* ================================================
+            BOTTOM ACCENT
+            ================================================ */}
 
         <div
           aria-hidden="true"
@@ -446,14 +523,28 @@ function CategoryTile({
 
 export default function CategoriesPage() {
   const router = useRouter();
+
   const prefersReducedMotion = useReducedMotion();
-  const reducedMotion = prefersReducedMotion === true;
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [location, setLocation] = useState("Worldwide");
-  const [dateFilter, setDateFilter] = useState("");
+  const reducedMotion =
+    prefersReducedMotion === true;
 
-  /* SEARCH FUNCTION */
+  /* ========================================================
+     SEARCH STATE
+     ======================================================== */
+
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [location, setLocation] =
+    useState("Worldwide");
+
+  const [dateFilter, setDateFilter] =
+    useState("");
+
+  /* ========================================================
+     SEARCH SUBMISSION
+     ======================================================== */
 
   const handleSearch = (
     event: FormEvent<HTMLFormElement>
@@ -461,6 +552,7 @@ export default function CategoriesPage() {
     event.preventDefault();
 
     const params = new URLSearchParams();
+
     const query = searchQuery.trim();
 
     if (query) {
@@ -482,11 +574,15 @@ export default function CategoriesPage() {
     );
   };
 
+  /* ========================================================
+     RENDER
+     ======================================================== */
+
   return (
     <main className="min-h-screen bg-[#fffdf9]">
-      {/* ======================================================
+      {/* ====================================================
           CATEGORY HERO SECTION
-          ====================================================== */}
+          ==================================================== */}
 
       <section
         aria-labelledby="category-page-title"
@@ -497,7 +593,7 @@ export default function CategoriesPage() {
           bg-[#fffaf2]
         "
       >
-        {/* DECORATIVE BACKGROUND ELEMENTS */}
+        {/* DECORATIVE BACKGROUND CIRCLE 1 */}
 
         <div
           aria-hidden="true"
@@ -515,6 +611,8 @@ export default function CategoriesPage() {
           "
         />
 
+        {/* DECORATIVE BACKGROUND CIRCLE 2 */}
+
         <div
           aria-hidden="true"
           className="
@@ -531,6 +629,8 @@ export default function CategoriesPage() {
           "
         />
 
+        {/* SOFT BACKGROUND GLOW */}
+
         <div
           aria-hidden="true"
           className="
@@ -546,10 +646,12 @@ export default function CategoriesPage() {
           "
         />
 
-        {/* CONTAINER */}
+        {/* MAIN CONTENT CONTAINER */}
 
         <div className="vizha-container relative z-10 mx-auto w-full">
-          {/* HERO CONTENT */}
+          {/* ==================================================
+              HERO CONTENT GRID
+              ================================================== */}
 
           <div
             className="
@@ -566,15 +668,23 @@ export default function CategoriesPage() {
               lg:pt-8
             "
           >
-            {/* LEFT TEXT */}
+            {/* ==============================================
+                LEFT — TEXT CONTENT
+                ============================================== */}
 
             <motion.div
               initial={
                 reducedMotion
                   ? false
-                  : { opacity: 0, x: -25 }
+                  : {
+                      opacity: 0,
+                      x: -25,
+                    }
               }
-              animate={{ opacity: 1, x: 0 }}
+              animate={{
+                opacity: 1,
+                x: 0,
+              }}
               transition={{
                 duration: reducedMotion ? 0 : 0.65,
               }}
@@ -609,24 +719,29 @@ export default function CategoriesPage() {
                 </span>
               </div>
 
-              {/* HERO TITLE */}
+              {/* MAIN HEADING */}
 
               <h1
                 id="category-page-title"
                 className="
                   max-w-162.5
+                  overflow-visible
+                  pb-[0.08em]
                   font-sans
                   text-[clamp(2.55rem,4.2vw,4.1rem)]
                   font-extrabold
-                  leading-[1.04]
+                  leading-[1.12]
                   tracking-[-0.045em]
                   text-[#171717]
                 "
               >
                 Find Your Kind of{" "}
+
                 <span
                   className="
                     block
+                    overflow-visible
+                    pb-[0.1em]
                     bg-linear-to-r
                     from-[#f28b00]
                     via-[#db7c00]
@@ -652,20 +767,38 @@ export default function CategoriesPage() {
                 "
               >
                 Explore a world of events, from live music
-                and cultural celebrations to comedy, sports,
-                theatre, festivals, workshops and more.
+                and cultural celebrations to comedy,
+                sports, theatre, festivals, workshops
+                and more.
               </p>
             </motion.div>
 
-            {/* RIGHT HERO ARTWORK */}
+            {/* ==============================================
+                RIGHT — ORIGINAL HERO ARTWORK
+
+                CORRECTED:
+                - No tagline text
+                - No cream floating panel
+                - No decorative tagline lines
+                - No extra content on top of the image
+
+                The original image is preserved.
+
+                ============================================== */}
 
             <motion.div
               initial={
                 reducedMotion
                   ? false
-                  : { opacity: 0, x: 25 }
+                  : {
+                      opacity: 0,
+                      x: 25,
+                    }
               }
-              animate={{ opacity: 1, x: 0 }}
+              animate={{
+                opacity: 1,
+                x: 0,
+              }}
               transition={{
                 duration: reducedMotion ? 0 : 0.8,
                 delay: reducedMotion ? 0 : 0.1,
@@ -674,17 +807,19 @@ export default function CategoriesPage() {
                 relative
                 hidden
                 h-85
+                min-w-0
                 overflow-hidden
                 lg:block
               "
             >
-              {/* ARTWORK */}
+              {/* ORIGINAL CATEGORY HERO IMAGE */}
 
               <div
                 aria-hidden="true"
                 className="
                   absolute
                   inset-0
+                  z-0
                   bg-cover
                   bg-center
                   bg-no-repeat
@@ -695,7 +830,7 @@ export default function CategoriesPage() {
                 }}
               />
 
-              {/* SOFT IMAGE TRANSITION */}
+              {/* SOFT LEFT TRANSITION ONLY */}
 
               <div
                 aria-hidden="true"
@@ -703,6 +838,7 @@ export default function CategoriesPage() {
                   pointer-events-none
                   absolute
                   inset-0
+                  z-10
                   bg-linear-to-r
                   from-[#fffaf2]
                   via-[#fffaf2]/15
@@ -710,12 +846,15 @@ export default function CategoriesPage() {
                 "
               />
 
+              {/* SUBTLE BOTTOM FADE */}
+
               <div
                 aria-hidden="true"
                 className="
                   pointer-events-none
                   absolute
                   inset-0
+                  z-10
                   bg-linear-to-t
                   from-[#fffaf2]/40
                   via-transparent
@@ -723,59 +862,50 @@ export default function CategoriesPage() {
                 "
               />
 
-              {/* DECORATIVE MESSAGE */}
+              {/*
+                IMPORTANT:
 
-              <div className="absolute right-8 top-8 -rotate-6 xl:right-12">
-                <p
-                  className="
-                    font-serif
-                    text-[23px]
-                    italic
-                    leading-[1.05]
-                    text-[#dc7900]
-                    xl:text-[26px]
-                  "
-                >
-                  Live
-                  <br />
-                  Events
-                  <br />
-                  Brighter
-                  <br />
-                  Together
-                </p>
+                The previous "Live Events Brighter Together"
+                overlay has been completely removed.
 
-                <div
-                  aria-hidden="true"
-                  className="
-                    ml-2
-                    mt-3
-                    h-0.5
-                    w-14
-                    rotate-[-8deg]
-                    bg-[#dc7900]
-                  "
-                />
-              </div>
+                Do not add the cream panel back here.
+
+                This area intentionally contains only:
+                - The original hero image
+                - A subtle left-side blending gradient
+                - A subtle bottom fade
+              */}
             </motion.div>
           </div>
 
           {/* ==================================================
-              SEARCH / FILTER BAR
+              SEARCH AND FILTER BAR
               ================================================== */}
 
           <motion.div
             initial={
               reducedMotion
                 ? false
-                : { opacity: 0, y: 18 }
+                : {
+                    opacity: 0,
+                    y: 18,
+                  }
             }
-            animate={{ opacity: 1, y: 0 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
             transition={{
               duration: reducedMotion ? 0 : 0.6,
               delay: reducedMotion ? 0 : 0.15,
             }}
-            className="relative z-30 mb-9 lg:-mt-3 lg:mb-11"
+            className="
+              relative
+              z-30
+              mb-9
+              lg:-mt-3
+              lg:mb-11
+            "
           >
             <form
               role="search"
@@ -800,7 +930,9 @@ export default function CategoriesPage() {
                 lg:rounded-[20px]
               "
             >
-              {/* SEARCH INPUT */}
+              {/* ============================================
+                  SEARCH INPUT
+                  ============================================ */}
 
               <div
                 className="
@@ -846,7 +978,9 @@ export default function CategoriesPage() {
                 />
               </div>
 
-              {/* LOCATION */}
+              {/* ============================================
+                  LOCATION FILTER
+                  ============================================ */}
 
               <div
                 className="
@@ -897,7 +1031,10 @@ export default function CategoriesPage() {
                   "
                 >
                   {locations.map((item) => (
-                    <option key={item} value={item}>
+                    <option
+                      key={item}
+                      value={item}
+                    >
                       {item}
                     </option>
                   ))}
@@ -906,11 +1043,18 @@ export default function CategoriesPage() {
                 <ChevronDown
                   size={15}
                   aria-hidden="true"
-                  className="pointer-events-none absolute right-4 text-[#555]"
+                  className="
+                    pointer-events-none
+                    absolute
+                    right-4
+                    text-[#555]
+                  "
                 />
               </div>
 
-              {/* DATE FILTER */}
+              {/* ============================================
+                  DATE FILTER
+                  ============================================ */}
 
               <div
                 className="
@@ -973,11 +1117,18 @@ export default function CategoriesPage() {
                 <ChevronDown
                   size={15}
                   aria-hidden="true"
-                  className="pointer-events-none absolute right-4 text-[#555]"
+                  className="
+                    pointer-events-none
+                    absolute
+                    right-4
+                    text-[#555]
+                  "
                 />
               </div>
 
-              {/* SEARCH BUTTON */}
+              {/* ============================================
+                  SEARCH BUTTON
+                  ============================================ */}
 
               <button
                 type="submit"
@@ -1015,10 +1166,16 @@ export default function CategoriesPage() {
                   size={17}
                   strokeWidth={2.2}
                   aria-hidden="true"
-                  className="transition-transform duration-300 group-hover:scale-110"
+                  className="
+                    transition-transform
+                    duration-300
+                    group-hover:scale-110
+                  "
                 />
 
-                <span>Search Events</span>
+                <span>
+                  Search Events
+                </span>
               </button>
             </form>
           </motion.div>
@@ -1029,12 +1186,20 @@ export default function CategoriesPage() {
 
           <section
             aria-labelledby="all-categories-title"
-            className="pb-14 sm:pb-16 lg:pb-20"
+            className="
+              pb-14
+              sm:pb-16
+              lg:pb-20
+            "
           >
-            {/* SECTION HEADING */}
+            {/* ==============================================
+                SECTION HEADING
+                ============================================== */}
 
             <div className="mb-6 flex items-end justify-between gap-4 sm:mb-8">
               <div>
+                {/* SMALL ORANGE ACCENT */}
+
                 <div
                   aria-hidden="true"
                   className="
@@ -1063,10 +1228,19 @@ export default function CategoriesPage() {
                   Browse All Categories
                 </h2>
 
-                <p className="mt-2 text-[13px] text-[#777] sm:text-[14px]">
+                <p
+                  className="
+                    mt-2
+                    text-[13px]
+                    text-[#777]
+                    sm:text-[14px]
+                  "
+                >
                   Discover experiences for every interest.
                 </p>
               </div>
+
+              {/* CATEGORY COUNT */}
 
               <span
                 className="
@@ -1087,7 +1261,9 @@ export default function CategoriesPage() {
               </span>
             </div>
 
-            {/* CATEGORY CARDS */}
+            {/* ==============================================
+                ALL CATEGORY CARDS
+                ============================================== */}
 
             <div
               className="

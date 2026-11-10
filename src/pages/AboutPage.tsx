@@ -1,7 +1,7 @@
 
-
 import Image from "next/image";
 import Link from "next/link";
+
 import {
   motion,
   useReducedMotion,
@@ -24,16 +24,32 @@ import Header from "@/components/header/Header";
 import Footer from "@/components/footer/Footer";
 
 /* ==========================================================
-   VIZHA TICKETS - ABOUT US PAGE
+   VIZHATICKETS — ABOUT US PAGE
+
+   React + Vite + TypeScript
+
+   CORRECTIONS
+   ----------------------------------------------------------
+   - Browse Events button now has solid white background
+   - Black text and arrow remain visible at all times
+   - Removed dark transparent secondary button styling
+   - Preserved orange Partner With Us button
+   - Preserved hero heading descender fix
+   - Preserved original images
+   - Preserved statistics
+   - Preserved benefit cards
+   - Preserved organizer banner
+   - Preserved Framer Motion animations
+   - Preserved responsive design
+
    ========================================================== */
 
-/* ----------------------------------------------------------
+/* ==========================================================
    STATISTICS
 
-   IMPORTANT:
-   Replace these values with verified statistics before
-   publishing the production website.
-   ---------------------------------------------------------- */
+   These are placeholder marketing figures.
+   Replace them with verified information before launch.
+   ========================================================== */
 
 const stats = [
   {
@@ -58,9 +74,9 @@ const stats = [
   },
 ] as const;
 
-/* ----------------------------------------------------------
+/* ==========================================================
    BENEFITS
-   ---------------------------------------------------------- */
+   ========================================================== */
 
 const benefits = [
   {
@@ -100,16 +116,15 @@ export default function AboutPage() {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-[#fffaf3] text-[#171717]">
-
-      {/* ======================================================
+      {/* ====================================================
           HEADER
-          ====================================================== */}
+          ==================================================== */}
 
       <Header />
 
-      {/* ======================================================
-          HERO SECTION - OUR STORY AND MISSION
-          ====================================================== */}
+      {/* ====================================================
+          HERO SECTION
+          ==================================================== */}
 
       <section
         id="our-story"
@@ -125,7 +140,12 @@ export default function AboutPage() {
             fill
             priority
             sizes="100vw"
-            className="object-cover object-[62%_center] sm:object-[57%_center] lg:object-center"
+            className="
+              object-cover
+              object-[62%_center]
+              sm:object-[57%_center]
+              lg:object-center
+            "
           />
         </div>
 
@@ -133,21 +153,45 @@ export default function AboutPage() {
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-1 bg-linear-to-b from-[#fff3e7]/90 via-[#fff2e4]/70 to-[#fff4e8]/40 lg:hidden"
+          className="
+            pointer-events-none
+            absolute inset-0 z-1
+            bg-linear-to-b
+            from-[#fff3e7]/90
+            via-[#fff2e4]/70
+            to-[#fff4e8]/40
+            lg:hidden
+          "
         />
 
         {/* DESKTOP READABILITY OVERLAY */}
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-1 hidden bg-linear-to-r from-[#fff1e7]/45 via-[#fff1e7]/10 to-transparent lg:block"
+          className="
+            pointer-events-none
+            absolute inset-0 z-1
+            hidden
+            bg-linear-to-r
+            from-[#fff1e7]/45
+            via-[#fff1e7]/10
+            to-transparent
+            lg:block
+          "
         />
 
         {/* SOFT DECORATIVE LIGHT */}
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -left-40 top-[15%] z-1 h-105 w-105 rounded-full bg-[#fff2dc]/25 blur-[100px]"
+          className="
+            pointer-events-none
+            absolute -left-40 top-[15%] z-1
+            h-105 w-105
+            rounded-full
+            bg-[#fff2dc]/25
+            blur-[100px]
+          "
         />
 
         {/* MAIN HERO CONTAINER */}
@@ -166,15 +210,12 @@ export default function AboutPage() {
               lg:min-h-143.75
               lg:grid-cols-[1fr_0.95fr]
               lg:gap-10
-              lg:py-12
+              lg:py-14
               xl:min-h-151.25
               2xl:min-h-157.5
             "
           >
-
-            {/* ==============================================
-                LEFT HERO CONTENT
-                ============================================== */}
+            {/* LEFT HERO CONTENT */}
 
             <motion.div
               initial={
@@ -193,9 +234,14 @@ export default function AboutPage() {
                 duration: reducedMotion ? 0 : 0.7,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="relative z-20 w-full max-w-165"
+              className="
+                relative z-20
+                w-full
+                max-w-165
+                overflow-visible
+                py-2
+              "
             >
-
               {/* EYEBROW BADGE */}
 
               <div
@@ -205,11 +251,9 @@ export default function AboutPage() {
                   items-center
                   gap-2.5
                   rounded-full
-                  border
-                  border-[#f2d5ad]
+                  border border-[#f2d5ad]
                   bg-[#fff4e3]/90
-                  px-4
-                  py-2.5
+                  px-4 py-2.5
                   shadow-[0_3px_12px_rgba(159,90,15,0.06)]
                   backdrop-blur-md
                 "
@@ -235,28 +279,43 @@ export default function AboutPage() {
                 </span>
               </div>
 
-              {/* MAIN HERO HEADING */}
+              {/* HERO HEADING
+
+                  Retains the earlier fix for lowercase
+                  descenders such as "g".
+              */}
 
               <h1
                 id="about-hero-title"
                 className="
+                  relative
                   max-w-160
+                  overflow-visible
+                  pb-[0.12em]
                   text-[clamp(2.5rem,4.1vw,3.65rem)]
                   font-extrabold
-                  leading-[1.08]
+                  leading-[1.2]
                   tracking-[-0.045em]
                   text-[#171717]
                 "
               >
-                Empowering Live
+                <span className="block">
+                  Empowering Live
+                </span>
+
                 <span className="block">
                   Experiences That
                 </span>
+
+                {/* ORANGE GRADIENT HEADING */}
 
                 <span
                   className="
                     mt-1
                     block
+                    overflow-visible
+                    pb-[0.16em]
+                    leading-[1.2]
                     bg-linear-to-r
                     from-[#dd500b]
                     via-[#e66b08]
@@ -273,7 +332,7 @@ export default function AboutPage() {
 
               <p
                 className="
-                  mt-6
+                  mt-5
                   max-w-135
                   text-[14px]
                   leading-[1.85]
@@ -282,10 +341,11 @@ export default function AboutPage() {
                   lg:text-[15px]
                 "
               >
-                VizhaTickets was created to celebrate culture,
-                art, music, and sports by making live event
-                ticketing effortless, reliable, and accessible
-                to everyone around the world.
+                VizhaTickets was created to celebrate
+                culture, art, music, and sports by
+                making live event ticketing effortless,
+                reliable, and accessible to everyone
+                around the world.
               </p>
 
               {/* DISCOVER EVENTS CTA */}
@@ -314,13 +374,10 @@ export default function AboutPage() {
                     sm:text-[14px]
                   "
                 >
-                  {/* PLAY ICON */}
-
                   <span
                     className="
                       flex
-                      h-12
-                      w-12
+                      h-12 w-12
                       shrink-0
                       items-center
                       justify-center
@@ -353,18 +410,21 @@ export default function AboutPage() {
                     size={18}
                     strokeWidth={2}
                     aria-hidden="true"
-                    className="text-[#df6408] transition-transform duration-300 motion-safe:group-hover:translate-x-1"
+                    className="
+                      text-[#df6408]
+                      transition-transform
+                      duration-300
+                      motion-safe:group-hover:translate-x-1
+                    "
                   />
                 </Link>
               </div>
             </motion.div>
 
-            {/* RIGHT SPACER
+            {/* RIGHT SIDE SPACER
 
-                Hero artwork already exists in the
-                background image.
-
-                No duplicate images are added.
+                The original hero artwork already
+                contains the right-side visuals.
             */}
 
             <div
@@ -374,9 +434,9 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* ======================================================
-            STATISTICS SECTION
-            ====================================================== */}
+        {/* ==================================================
+            STATISTICS
+            ================================================== */}
 
         <div className="vizha-container relative z-30 mx-auto w-full pb-8 sm:pb-10 lg:pb-12">
           <motion.div
@@ -458,8 +518,7 @@ export default function AboutPage() {
                   <div
                     className="
                       flex
-                      h-10.75
-                      w-10.75
+                      h-10.75 w-10.75
                       shrink-0
                       items-center
                       justify-center
@@ -518,23 +577,37 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ======================================================
-          WHY CHOOSE VIZHATICKETS
-          ====================================================== */}
+      {/* ====================================================
+          WHY CHOOSE VIZHATICKETS?
+          ==================================================== */}
 
       <section
         aria-labelledby="why-choose-title"
-        className="relative isolate overflow-hidden bg-[#fffaf3] py-14 sm:py-16 lg:py-18"
+        className="
+          relative
+          isolate
+          overflow-hidden
+          bg-[#fffaf3]
+          py-14
+          sm:py-16
+          lg:py-18
+        "
       >
         {/* BACKGROUND ACCENT */}
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-32.5 top-[10%] h-85 w-85 rounded-full bg-[#f5c67c]/10 blur-[90px]"
+          className="
+            pointer-events-none
+            absolute -right-32.5 top-[10%]
+            h-85 w-85
+            rounded-full
+            bg-[#f5c67c]/10
+            blur-[90px]
+          "
         />
 
         <div className="vizha-container relative z-10 mx-auto w-full">
-
           {/* SECTION HEADING */}
 
           <motion.div
@@ -564,7 +637,7 @@ export default function AboutPage() {
               className="
                 text-[27px]
                 font-extrabold
-                leading-tight
+                leading-[1.2]
                 tracking-[-0.035em]
                 text-[#171717]
                 sm:text-[33px]
@@ -574,11 +647,18 @@ export default function AboutPage() {
               Why Choose VizhaTickets?
             </h2>
 
-            {/* ORANGE ACCENT */}
-
             <div
               aria-hidden="true"
-              className="mx-auto mt-4 h-1 w-11 rounded-full bg-linear-to-r from-[#f49a12] to-[#c9790b]"
+              className="
+                mx-auto
+                mt-4
+                h-1
+                w-11
+                rounded-full
+                bg-linear-to-r
+                from-[#f49a12]
+                to-[#c9790b]
+              "
             />
 
             <p
@@ -670,8 +750,7 @@ export default function AboutPage() {
                   <div
                     className="
                       flex
-                      h-15
-                      w-15
+                      h-15 w-15
                       shrink-0
                       items-center
                       justify-center
@@ -726,16 +805,20 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ======================================================
+      {/* ====================================================
           EVENT ORGANIZER PROMOTION
-          ====================================================== */}
+          ==================================================== */}
 
       <section
         aria-labelledby="organizer-banner-title"
-        className="bg-[#fffaf3] pb-14 sm:pb-16 lg:pb-20"
+        className="
+          bg-[#fffaf3]
+          pb-14
+          sm:pb-16
+          lg:pb-20
+        "
       >
         <div className="vizha-container mx-auto w-full">
-
           <motion.div
             initial={
               reducedMotion
@@ -788,14 +871,29 @@ export default function AboutPage() {
 
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-r from-black/95 via-black/75 to-black/40"
+              className="
+                pointer-events-none
+                absolute inset-0
+                -z-10
+                bg-linear-to-r
+                from-black/95
+                via-black/75
+                to-black/40
+              "
             />
 
             {/* GOLDEN ATMOSPHERE */}
 
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -right-30 -top-30 h-80 w-80 rounded-full bg-[#e78a11]/10 blur-[100px]"
+              className="
+                pointer-events-none
+                absolute -right-30 -top-30
+                h-80 w-80
+                rounded-full
+                bg-[#e78a11]/10
+                blur-[100px]
+              "
             />
 
             {/* ORGANIZER CONTENT */}
@@ -857,8 +955,8 @@ export default function AboutPage() {
                     sm:text-[15px]
                   "
                 >
-                  Reach passionate fans and make your event
-                  a memorable experience.
+                  Reach passionate fans and make your
+                  event a memorable experience.
                 </p>
               </div>
 
@@ -877,7 +975,11 @@ export default function AboutPage() {
                   lg:justify-end
                 "
               >
-                {/* PRIMARY CTA */}
+                {/* ==========================================
+                    PRIMARY CTA — PARTNER WITH US
+
+                    Original orange design preserved.
+                    ========================================== */}
 
                 <Link
                   href="/contact"
@@ -913,11 +1015,25 @@ export default function AboutPage() {
                   <ArrowRight
                     size={17}
                     aria-hidden="true"
-                    className="transition-transform duration-300 motion-safe:group-hover:translate-x-1"
+                    className="
+                      transition-transform
+                      duration-300
+                      motion-safe:group-hover:translate-x-1
+                    "
                   />
                 </Link>
 
-                {/* SECONDARY CTA */}
+                {/* ==========================================
+                    SECONDARY CTA — BROWSE EVENTS
+
+                    FIXED:
+                    - Solid white background
+                    - Black label
+                    - Black arrow
+                    - No dark transparent button
+                    - High contrast on dark banner
+                    - Light cream hover effect
+                    ========================================== */}
 
                 <Link
                   href="/events"
@@ -930,32 +1046,41 @@ export default function AboutPage() {
                     gap-2.5
                     rounded-full
                     border
-                    border-white/75
-                    bg-black/45
+                    border-white
+                    bg-white
                     px-6
                     text-[13px]
                     font-bold
-                    text-white
-                    backdrop-blur-md
+                    text-[#171717]
+                    shadow-[0_6px_20px_rgba(0,0,0,0.12)]
                     outline-none
                     transition-all
                     duration-300
                     hover:-translate-y-0.5
-                    hover:border-white
-                    hover:bg-white
+                    hover:border-[#fff4e5]
+                    hover:bg-[#fff4e5]
                     hover:text-[#171717]
+                    hover:shadow-[0_10px_25px_rgba(0,0,0,0.18)]
                     focus-visible:ring-2
                     focus-visible:ring-white
                     focus-visible:ring-offset-4
                     sm:min-w-41.25
                   "
                 >
-                  Browse Events
+                  <span className="text-[#171717]">
+                    Browse Events
+                  </span>
 
                   <ArrowRight
                     size={17}
+                    strokeWidth={2}
                     aria-hidden="true"
-                    className="transition-transform duration-300 motion-safe:group-hover:translate-x-1"
+                    className="
+                      text-[#171717]
+                      transition-transform
+                      duration-300
+                      motion-safe:group-hover:translate-x-1
+                    "
                   />
                 </Link>
               </div>
@@ -964,9 +1089,9 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ======================================================
+      {/* ====================================================
           FOOTER
-          ====================================================== */}
+          ==================================================== */}
 
       <Footer />
     </main>
