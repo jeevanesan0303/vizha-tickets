@@ -1,46 +1,64 @@
 
+import { useSyncExternalStore } from "react";
 import type { Event } from "@/types";
 
 /* ==========================================================
-   VIZHATICKETS — COMPLETE EVENT DATA CONFIGURATION
+   VIZHATICKETS — SHARED EVENT DATA SYSTEM
 
    React + Vite + TypeScript
 
-   FEATURES
+   PURPOSE
    ----------------------------------------------------------
-   1. General admission booking
-   2. Area / zone selection
-   3. Individual seat selection
-   4. Event-specific ticket pricing
-   5. Seating and venue configuration
-   6. Seat availability representation
-   7. Event listing compatibility
-   8. Event Details page compatibility
-   9. Existing checkout compatibility
-   10. Customer booking integration
+   Connect the Admin Dashboard and Customer Website
+   using a common frontend event catalogue.
 
-   IMPORTANT
+   Supports:
+   - Existing sample events
+   - Published admin-created events
+   - Draft visibility rules
+   - Dynamic ticket categories
+   - Event banners
+   - Venue layout images
+   - General admission booking
+   - Zone/area selection
+   - Demonstration reserved seating
+   - Existing checkout helper compatibility
+   - Event details lookup by slug and ID
+   - Reactive customer event listings
+
+   DEVELOPMENT LIMITATIONS
    ----------------------------------------------------------
-   Current booking / seating data is DEMO ONLY.
+   Browser localStorage is not a production database.
 
-   Seat availability in this file is NOT live inventory.
+   Real booking availability, payment confirmation,
+   seat locking, QR issuance and organizer settlements
+   require secure backend services.
 
-   Real bookings require backend authentication,
-   seat locking, inventory checks and payment verification.
+   Uploaded venue images are visual references only.
+   They do not automatically create clickable zones.
    ========================================================== */
 
 /* ==========================================================
-   BOOKING MODES
+   STORAGE CONFIGURATION
+   ========================================================== */
+
+export const ADMIN_EVENTS_STORAGE_KEY =
+  "vizha_admin_events_v1";
+
+export const ADMIN_ORGANIZERS_STORAGE_KEY =
+  "vizha_admin_organizers_v1";
+
+export const ADMIN_DATA_CHANGE_EVENT =
+  "vizha-admin-data-changed";
+
+/* ==========================================================
+   BOOKING TYPES
    ========================================================== */
 
 export type EventBookingMode =
   | "general"
   | "zone"
   | "seat";
-
-/* ==========================================================
-   TICKET CATEGORY
-   ========================================================== */
 
 export interface EventTicketTier {
   id: string;
@@ -50,36 +68,14 @@ export interface EventTicketTier {
   description?: string;
   available?: boolean;
 
-  /* Optional booking limitations */
-
   minQuantity?: number;
   maxQuantity?: number;
 
-  /* Optional availability display */
-
   capacity?: number;
-
-  /* Appearance configuration */
-
   color?: string;
-
-  /* Actual organizer price configuration needed */
 
   demo?: boolean;
 }
-
-/* ==========================================================
-   EVENT ZONE CONFIGURATION
-
-   Example:
-
-   VIP — Front Standing
-   GOLD — Middle Standing
-   STANDARD — General Standing
-
-   Customers choose a zone and quantity.
-
-   ========================================================== */
 
 export interface EventBookingZone {
   id: string;
@@ -89,8 +85,6 @@ export interface EventBookingZone {
 
   description?: string;
 
-  /* General position of the zone */
-
   position?:
     | "front"
     | "middle"
@@ -99,46 +93,14 @@ export interface EventBookingZone {
     | "right"
     | "center";
 
-  /* User interface display */
-
   color?: string;
-
-  /* Capacity configuration */
-
   capacity?: number;
-
   available?: boolean;
-
-  /* Optional zone information */
 
   benefits?: string[];
 
-  /* Demo data, not confirmed organizer layout */
-
   demo?: boolean;
 }
-
-/* ==========================================================
-   SEAT STATUS
-
-   available:
-     Can be selected in the demo UI.
-
-   unavailable:
-     Cannot be selected.
-
-   reserved:
-     Example of a temporarily unavailable seat.
-
-   sold:
-     Example of a purchased seat.
-
-   blocked:
-     Not selectable.
-
-   NOTE:
-   Real statuses must come from a backend database.
-   ========================================================== */
 
 export type EventSeatStatus =
   | "available"
@@ -147,60 +109,31 @@ export type EventSeatStatus =
   | "sold"
   | "blocked";
 
-/* ==========================================================
-   INDIVIDUAL SEAT
-   ========================================================== */
-
 export interface EventSeat {
   id: string;
-
   row: string;
   number: number;
-
   label: string;
 
-  /* Maps the seat to a ticket category */
-
   ticketTierId: string;
-
-  /* Optional zone where the seat is located */
-
   zoneId?: string;
 
   status: EventSeatStatus;
 
-  /* Optional seat-specific information */
-
   accessible?: boolean;
-
   companionSeat?: boolean;
 }
-
-/* ==========================================================
-   SEATING ROW
-   ========================================================== */
 
 export interface EventSeatRow {
   id: string;
   label: string;
-
   seats: EventSeat[];
 }
 
-/* ==========================================================
-   EVENT SEATING PLAN
-   ========================================================== */
-
 export interface EventSeatingConfig {
   id: string;
-
   name: string;
-
-  /* True for example layouts */
-
   demo: boolean;
-
-  /* Stage position for visual seat selector */
 
   stagePosition?:
     | "top"
@@ -209,30 +142,13 @@ export interface EventSeatingConfig {
     | "right";
 
   stageLabel?: string;
-
-  /* Optional seat map background image */
-
   mapImage?: string;
-
-  /* Maximum tickets per booking */
 
   maxSeatsPerBooking: number;
 
-  /* Physical row arrangement */
-
   rows: EventSeatRow[];
-
-  /* UI notes */
-
   notes?: string[];
 }
-
-/* ==========================================================
-   VENUE INFORMATION
-
-   More accurate information can be supplied by
-   organizers when events are created.
-   ========================================================== */
 
 export interface EventVenueDetails {
   name: string;
@@ -241,16 +157,10 @@ export interface EventVenueDetails {
   city?: string;
   country?: string;
 
-  /* Optional actual map coordinates */
-
   latitude?: number;
   longitude?: number;
 
-  /* Optional organizer-provided venue map */
-
   mapImage?: string;
-
-  /* Venue instructions */
 
   entranceInstructions?: string;
   parkingInformation?: string;
@@ -258,17 +168,12 @@ export interface EventVenueDetails {
 }
 
 /* ==========================================================
-   EXTENDED EVENT INTERFACE
+   PUBLIC EVENT MODEL
 
-   Extends the existing Event type.
-
-   Existing components using Event will continue
-   to work with these records.
+   Extends the existing shared Event interface.
    ========================================================== */
 
 export interface EventDetails extends Event {
-  /* Additional event information */
-
   duration?: string;
   ageLimit?: string;
   language?: string;
@@ -279,58 +184,123 @@ export interface EventDetails extends Event {
   interestedCount?: number;
 
   fullDescription?: string;
-
-  /* ISO date when confirmed */
-
   dateISO?: string;
 
-  /* Basic event configuration */
-
   bookingEnabled?: boolean;
-
-  /* Booking mode */
-
   bookingMode?: EventBookingMode;
 
-  /* Ticket categories */
-
   ticketTiers?: EventTicketTier[];
-
-  /* Zone selection */
-
   bookingZones?: EventBookingZone[];
-
-  /* Individual seat selection */
-
   seatingConfig?: EventSeatingConfig;
 
-  /* Optional structured venue information */
-
   venueDetails?: EventVenueDetails;
-
-  /* Ticket restrictions */
 
   minTicketsPerBooking?: number;
   maxTicketsPerBooking?: number;
 
-  /* Whether booking configuration is sample data */
-
   bookingConfigurationDemo?: boolean;
+
+  /* Shared admin/public metadata */
+
+  adminEventId?: string;
+  organizerId?: string;
+
+  publicationStatus?: "Draft" | "Published";
+
+  venueLayoutImage?: string;
+
+  salesStart?: string;
+  salesEnd?: string;
+
+  refundPolicy?: string;
+  terms?: string;
+
+  endDate?: string;
+  endTime?: string;
+
+  eventSource?: "static" | "admin";
 }
 
 /* ==========================================================
-   HELPER — CREATE DEMO SEATING ROW
+   ADMIN EVENT STORAGE TYPES
 
-   This avoids manually defining every seat.
+   These describe the records saved by EventForm.tsx.
 
-   Example:
+   This module does not import AdminApp or EventForm,
+   avoiding circular dependencies between customer
+   and admin components.
+   ========================================================== */
 
-   createDemoSeatRow("A", 8, "vip", "front")
+interface StoredAdminTicketTier {
+  id: string;
+  name: string;
+  price: number;
+  capacity: number;
 
-   Generates:
+  maxPerBooking: number;
 
-   A1, A2, A3, A4, A5, A6, A7, A8
+  description?: string;
+  enabled?: boolean;
+}
 
+interface StoredAdminEvent {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+
+  organizerId: string;
+
+  country: string;
+  city: string;
+  venue: string;
+
+  date: string;
+  time: string;
+
+  endDate?: string;
+  endTime?: string;
+
+  currency: string;
+
+  ticketTiers?: StoredAdminTicketTier[];
+
+  admissionType?:
+    | "general"
+    | "zones"
+    | "reserved"
+    | "stadium";
+
+  stagePosition?: string;
+  venueNotes?: string;
+
+  imageUrl?: string;
+  venueLayoutImage?: string;
+
+  salesStart?: string;
+  salesEnd?: string;
+
+  refundPolicy?: string;
+  terms?: string;
+
+  bookingEnabled?: boolean;
+
+  status: "Draft" | "Published";
+  createdAt?: string;
+
+  price?: number;
+  capacity?: number;
+}
+
+interface StoredAdminOrganizer {
+  id: string;
+  name: string;
+  displayName?: string;
+  status?: string;
+}
+
+/* ==========================================================
+   DEMO SEATING ROW GENERATOR
    ========================================================== */
 
 function createDemoSeatRow(
@@ -343,22 +313,18 @@ function createDemoSeatRow(
   const seats: EventSeat[] = Array.from(
     { length: count },
     (_, index) => {
-      const seatNumber = index + 1;
-
-      const seatLabel =
-        `${rowLabel}${seatNumber}`;
-
-      const isUnavailable =
-        unavailableSeatNumbers.includes(seatNumber);
+      const number = index + 1;
+      const label = `${rowLabel}${number}`;
 
       return {
-        id: seatLabel,
+        id: label,
         row: rowLabel,
-        number: seatNumber,
-        label: seatLabel,
+        number,
+        label,
         ticketTierId,
         zoneId,
-        status: isUnavailable
+
+        status: unavailableSeatNumbers.includes(number)
           ? "unavailable"
           : "available",
       };
@@ -375,13 +341,10 @@ function createDemoSeatRow(
 /* ==========================================================
    DEMO TICKET CONFIGURATIONS
 
-   Prices for additional ticket categories are
-   examples only.
-
-   The original event.price values are preserved.
+   Retained from the original events.ts.
    ========================================================== */
 
-/* YUVAN — AREA SELECTION */
+/* YUVAN — ZONE BOOKING */
 
 const yuvanTicketTiers: EventTicketTier[] = [
   {
@@ -421,9 +384,7 @@ const yuvanBookingZones: EventBookingZone[] = [
     position: "front",
     color: "#b87918",
     description: "Front standing section",
-    benefits: [
-      "Front standing area",
-    ],
+    benefits: ["Front standing area"],
     available: true,
     demo: true,
   },
@@ -449,22 +410,7 @@ const yuvanBookingZones: EventBookingZone[] = [
   },
 ];
 
-/* ==========================================================
-   BHARATHANATYAM — INDIVIDUAL SEAT SELECTION
-
-   Example auditorium:
-
-   STAGE
-
-   A1 A2 A3 A4 A5 A6 A7 A8
-   B1 B2 B3 B4 B5 B6 B7 B8
-   C1 C2 C3 C4 C5 C6 C7 C8
-   D1 D2 D3 D4 D5 D6 D7 D8
-   E1 E2 E3 E4 E5 E6 E7 E8
-   F1 F2 F3 F4 F5 F6 F7 F8
-
-   This is not the actual Colombo Music Hall plan.
-   ========================================================== */
+/* BHARATHANATYAM — RESERVED SEATING */
 
 const bharathanatyamTicketTiers: EventTicketTier[] = [
   {
@@ -498,81 +444,34 @@ const bharathanatyamTicketTiers: EventTicketTier[] = [
 
 const bharathanatyamSeatingConfig: EventSeatingConfig = {
   id: "bharathanatyam-demo-seating",
-
   name: "Demo Auditorium Seating",
-
   demo: true,
 
   stagePosition: "top",
-
   stageLabel: "PERFORMANCE STAGE",
 
   maxSeatsPerBooking: 10,
 
   rows: [
-    createDemoSeatRow(
-      "A",
-      8,
-      "vip",
-      "front",
-      [3]
-    ),
+    createDemoSeatRow("A", 8, "vip", "front", [3]),
+    createDemoSeatRow("B", 8, "vip", "front", [5]),
 
-    createDemoSeatRow(
-      "B",
-      8,
-      "vip",
-      "front",
-      [5]
-    ),
+    createDemoSeatRow("C", 8, "gold", "middle", [2, 7]),
+    createDemoSeatRow("D", 8, "gold", "middle", [4]),
 
-    createDemoSeatRow(
-      "C",
-      8,
-      "gold",
-      "middle",
-      [2, 7]
-    ),
-
-    createDemoSeatRow(
-      "D",
-      8,
-      "gold",
-      "middle",
-      [4]
-    ),
-
-    createDemoSeatRow(
-      "E",
-      8,
-      "standard",
-      "back",
-      [1, 6]
-    ),
-
-    createDemoSeatRow(
-      "F",
-      8,
-      "standard",
-      "back",
-      [8]
-    ),
+    createDemoSeatRow("E", 8, "standard", "back", [1, 6]),
+    createDemoSeatRow("F", 8, "standard", "back", [8]),
   ],
 
   notes: [
     "This is a demonstration seating layout.",
     "Unavailable seats are sample data.",
     "Seat availability is not synchronized between customers.",
-    "The organizer must provide the actual seat plan before launch.",
+    "The organizer must provide an actual seat plan before launch.",
   ],
 };
 
-/* ==========================================================
-   SPORTS — DEMO STADIUM ZONES
-
-   Actual venue layout and match identity require
-   organizer verification.
-   ========================================================== */
+/* CRICKET — STADIUM ZONES */
 
 const cricketTicketTiers: EventTicketTier[] = [
   {
@@ -634,9 +533,7 @@ const cricketBookingZones: EventBookingZone[] = [
   },
 ];
 
-/* ==========================================================
-   GENERAL ADMISSION CONFIGURATIONS
-   ========================================================== */
+/* GENERAL ADMISSION EVENTS */
 
 const comedyTicketTiers: EventTicketTier[] = [
   {
@@ -661,20 +558,23 @@ const foodFestivalTicketTiers: EventTicketTier[] = [
 ];
 
 /* ==========================================================
-   MAIN EVENTS
+   ORIGINAL STATIC EVENTS
+
+   These records are retained as fallback demo events.
+
+   When the admin has saved an event catalogue, the
+   admin catalogue becomes the source of publication
+   status, prices and other configured information.
+
+   The original images, slugs and richer demo seat
+   configurations can still be reused for matching
+   previously known events.
    ========================================================== */
 
-export const events: EventDetails[] = [
-  /* ========================================================
-     EVENT 01 — YUVAN LIVE IN CONCERT
-     BOOKING MODE: ZONE
-     ======================================================== */
-
+export const staticEvents: EventDetails[] = [
   {
     id: "1",
-
     title: "Yuvan Live in Concert",
-
     slug: "yuvan-live-in-concert",
 
     description:
@@ -686,127 +586,91 @@ export const events: EventDetails[] = [
     image: "/images/events/yuvan-live.png",
 
     date: "25 OCT",
-
     time: "7:00 PM",
 
     location: "Jaffna, Sri Lanka",
-
     venue: "Jaffna Cultural Centre",
 
     category: "Concerts",
-
-    tags: [
-      "Concerts",
-      "Music Shows",
-    ],
+    tags: ["Concerts", "Music Shows"],
 
     eventType: "Live Concert",
 
     price: 2500,
-
     currency: "LKR",
 
-    /* BOOKING */
-
     bookingEnabled: true,
-
     bookingMode: "zone",
-
     bookingConfigurationDemo: true,
 
     minTicketsPerBooking: 1,
-
     maxTicketsPerBooking: 10,
 
     ticketTiers: yuvanTicketTiers,
-
     bookingZones: yuvanBookingZones,
-
-    /* VENUE */
 
     venueDetails: {
       name: "Jaffna Cultural Centre",
       city: "Jaffna",
       country: "Sri Lanka",
     },
-  },
 
-  /* ========================================================
-     EVENT 02 — BHARATHANATYAM ARANGETRAM
-     BOOKING MODE: SEAT
-     ======================================================== */
+    adminEventId: "EVT-001",
+    publicationStatus: "Published",
+    eventSource: "static",
+  },
 
   {
     id: "2",
-
     title: "Bharathanatyam Arangetram",
-
     slug: "bharathanatyam-arangetram",
 
     description:
       "Experience a beautiful evening of traditional Bharathanatyam.",
 
     fullDescription:
-      "Experience a beautiful evening of traditional Bharathanatyam.",
+      "Experience a beautiful evening of traditional Bharathanatyyam.",
 
     image: "/images/events/bharathanatyam.png",
 
     date: "28 OCT",
-
     time: "6:30 PM",
 
     location: "Colombo, Sri Lanka",
-
     venue: "Colombo Music Hall",
 
     category: "Cultural",
-
-    tags: [
-      "Cultural",
-      "Classical Dance",
-    ],
+    tags: ["Cultural", "Classical Dance"],
 
     eventType: "Dance Performance",
 
     price: 1000,
-
     currency: "LKR",
 
-    /* BOOKING */
-
     bookingEnabled: true,
-
     bookingMode: "seat",
-
     bookingConfigurationDemo: true,
 
     minTicketsPerBooking: 1,
-
     maxTicketsPerBooking: 10,
 
     ticketTiers: bharathanatyamTicketTiers,
-
     seatingConfig: bharathanatyamSeatingConfig,
-
-    /* VENUE */
 
     venueDetails: {
       name: "Colombo Music Hall",
       city: "Colombo",
       country: "Sri Lanka",
     },
-  },
 
-  /* ========================================================
-     EVENT 03 — TAMIL STAND-UP COMEDY
-     BOOKING MODE: GENERAL
-     ======================================================== */
+    adminEventId: "EVT-002",
+    publicationStatus: "Published",
+    eventSource: "static",
+  },
 
   {
     id: "3",
-
     title: "Tamil Stand-up Comedy Night",
-
     slug: "tamil-stand-up-comedy-night",
 
     description:
@@ -818,59 +682,42 @@ export const events: EventDetails[] = [
     image: "/images/events/comedy-night.png",
 
     date: "05 NOV",
-
     time: "7:30 PM",
 
     location: "Batticaloa, Sri Lanka",
-
     venue: "Batticaloa Town Hall",
 
     category: "Comedy",
-
-    tags: [
-      "Comedy",
-      "Stand-up",
-    ],
+    tags: ["Comedy", "Stand-up"],
 
     eventType: "Stand-up Comedy",
 
     price: 1500,
-
     currency: "LKR",
 
-    /* BOOKING */
-
     bookingEnabled: true,
-
     bookingMode: "general",
-
     bookingConfigurationDemo: true,
 
     minTicketsPerBooking: 1,
-
     maxTicketsPerBooking: 10,
 
     ticketTiers: comedyTicketTiers,
-
-    /* VENUE */
 
     venueDetails: {
       name: "Batticaloa Town Hall",
       city: "Batticaloa",
       country: "Sri Lanka",
     },
-  },
 
-  /* ========================================================
-     EVENT 04 — JAFFNA KINGS
-     BOOKING MODE: ZONE
-     ======================================================== */
+    adminEventId: "EVT-003",
+    publicationStatus: "Published",
+    eventSource: "static",
+  },
 
   {
     id: "4",
-
     title: "IPL 2026 — Jaffna Kings",
-
     slug: "ipl-2026-jaffna-kings",
 
     description:
@@ -882,61 +729,42 @@ export const events: EventDetails[] = [
     image: "/images/events/sports-event.png",
 
     date: "12 NOV",
-
     time: "6:00 PM",
 
     location: "Jaffna, Sri Lanka",
-
     venue: "Jaffna Stadium",
 
     category: "Sports",
-
-    tags: [
-      "Sports",
-      "Cricket",
-    ],
+    tags: ["Sports", "Cricket"],
 
     eventType: "Cricket Match",
 
     price: 1500,
-
     currency: "LKR",
 
-    /* BOOKING */
-
     bookingEnabled: true,
-
     bookingMode: "zone",
-
     bookingConfigurationDemo: true,
 
     minTicketsPerBooking: 1,
-
     maxTicketsPerBooking: 10,
 
     ticketTiers: cricketTicketTiers,
-
     bookingZones: cricketBookingZones,
-
-    /* VENUE */
 
     venueDetails: {
       name: "Jaffna Stadium",
       city: "Jaffna",
       country: "Sri Lanka",
     },
-  },
 
-  /* ========================================================
-     EVENT 05 — JAFFNA FOOD FESTIVAL
-     BOOKING MODE: GENERAL
-     ======================================================== */
+    publicationStatus: "Published",
+    eventSource: "static",
+  },
 
   {
     id: "5",
-
     title: "Jaffna Food Festival 2026",
-
     slug: "jaffna-food-festival-2026",
 
     description:
@@ -948,55 +776,680 @@ export const events: EventDetails[] = [
     image: "/images/events/featured-event.png",
 
     date: "18 NOV",
-
     time: "10:00 AM",
 
     location: "Jaffna, Sri Lanka",
-
     venue: "Jaffna Public Ground",
 
     category: "Festivals",
-
-    tags: [
-      "Festivals",
-      "Food",
-      "Cultural",
-    ],
+    tags: ["Festivals", "Food", "Cultural"],
 
     eventType: "Food Festival",
 
     price: 1200,
-
     currency: "LKR",
 
     featured: true,
 
-    /* BOOKING */
-
     bookingEnabled: true,
-
     bookingMode: "general",
-
     bookingConfigurationDemo: true,
 
     minTicketsPerBooking: 1,
-
     maxTicketsPerBooking: 10,
 
     ticketTiers: foodFestivalTicketTiers,
-
-    /* VENUE */
 
     venueDetails: {
       name: "Jaffna Public Ground",
       city: "Jaffna",
       country: "Sri Lanka",
     },
+
+    publicationStatus: "Published",
+    eventSource: "static",
   },
 ];
 
 /* ==========================================================
+   LEGACY ADMIN EVENT MAPPING
+
+   The existing admin sample IDs differ from the public
+   static event IDs. These mappings preserve known public
+   detail routes when admin versions replace them.
+
+   New admin-created events retain their own admin IDs.
+   ========================================================== */
+
+const LEGACY_EVENT_IDS: Record<string, string> = {
+  "EVT-001": "1",
+  "EVT-002": "2",
+  "EVT-003": "3",
+};
+
+function findMatchingStaticEvent(
+  adminEvent: StoredAdminEvent
+): EventDetails | undefined {
+  const mappedId = LEGACY_EVENT_IDS[adminEvent.id];
+
+  if (mappedId) {
+    const mapped = staticEvents.find(
+      (event) => event.id === mappedId
+    );
+
+    if (mapped) return mapped;
+  }
+
+  return staticEvents.find(
+    (event) =>
+      event.title.trim().toLowerCase() ===
+      adminEvent.title.trim().toLowerCase()
+  );
+}
+
+/* ==========================================================
+   HELPER — SAFE BROWSER STORAGE READ
+   ========================================================== */
+
+function readStorageArray<T>(
+  key: string
+): T[] | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const value = window.localStorage.getItem(key);
+
+    if (value === null) {
+      return null;
+    }
+
+    const parsed: unknown = JSON.parse(value);
+
+    return Array.isArray(parsed)
+      ? (parsed as T[])
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/* ==========================================================
+   HELPER — SLUG GENERATION
+   ========================================================== */
+
+export function createEventSlug(
+  title: string
+): string {
+  return title
+    .normalize("NFKD")
+    .toLowerCase()
+    .trim()
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "event";
+}
+
+/* ==========================================================
+   DATE / TIME CONVERSION
+   ========================================================== */
+
+function displayEventDate(
+  date: string
+): string {
+  if (!date) return "TBA";
+
+  const parts = date.split("-");
+
+  if (parts.length !== 3) {
+    return date;
+  }
+
+  const monthNames = [
+    "JAN", "FEB", "MAR", "APR",
+    "MAY", "JUN", "JUL", "AUG",
+    "SEP", "OCT", "NOV", "DEC",
+  ];
+
+  const monthIndex = Number(parts[1]) - 1;
+  const day = Number(parts[2]);
+
+  if (
+    monthIndex < 0 ||
+    monthIndex > 11 ||
+    !Number.isInteger(day)
+  ) {
+    return date;
+  }
+
+  return `${String(day).padStart(2, "0")} ${monthNames[monthIndex]}`;
+}
+
+function displayEventTime(
+  time: string
+): string {
+  if (!time) return "TBA";
+
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time);
+
+  if (!match) return time;
+
+  const hours = Number(match[1]);
+  const minutes = match[2];
+
+  if (hours > 23) return time;
+
+  const period = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+
+  return `${hour12}:${minutes} ${period}`;
+}
+
+/* ==========================================================
+   BOOKING MODE CONVERSION
+   ========================================================== */
+
+function mapAdmissionType(
+  type: StoredAdminEvent["admissionType"]
+): EventBookingMode {
+  switch (type) {
+    case "zones":
+    case "stadium":
+      return "zone";
+
+    case "reserved":
+      return "seat";
+
+    case "general":
+    default:
+      return "general";
+  }
+}
+
+/* ==========================================================
+   TICKET TIER CONVERSION
+   ========================================================== */
+
+function convertAdminTicketTiers(
+  adminEvent: StoredAdminEvent
+): EventTicketTier[] {
+  const source = Array.isArray(adminEvent.ticketTiers)
+    ? adminEvent.ticketTiers
+    : [];
+
+  if (source.length === 0) {
+    const price = Number(adminEvent.price ?? 0);
+    const capacity = Number(adminEvent.capacity ?? 100);
+
+    return [
+      {
+        id: `${adminEvent.id}-GENERAL`,
+        name: "General Admission",
+        price: Number.isFinite(price) ? price : 0,
+        capacity: Number.isFinite(capacity)
+          ? Math.max(1, capacity)
+          : 100,
+        maxQuantity: 10,
+        minQuantity: 1,
+        description: "General admission ticket",
+        available: true,
+        demo: true,
+      },
+    ];
+  }
+
+  return source.map((tier) => ({
+    id: tier.id,
+    name: tier.name,
+
+    price: Number.isFinite(Number(tier.price))
+      ? Number(tier.price)
+      : 0,
+
+    capacity: Number.isFinite(Number(tier.capacity))
+      ? Math.max(0, Number(tier.capacity))
+      : 0,
+
+    minQuantity: 1,
+
+    maxQuantity: Math.max(
+      1,
+      Number(tier.maxPerBooking) || 10
+    ),
+
+    description: tier.description || "",
+
+    available: tier.enabled !== false,
+    demo: true,
+  }));
+}
+
+/* ==========================================================
+   MATCH PREDEFINED DEMO CONFIGURATIONS
+
+   A predefined static seating or zone configuration is
+   only reused if the admin event still has matching tier
+   IDs and compatible prices.
+
+   This prevents an old demo seating map from silently
+   assigning seats to newly edited ticket categories.
+   ========================================================== */
+
+function canReuseBookingConfiguration(
+  original: EventDetails,
+  adminTiers: EventTicketTier[],
+  desiredMode: EventBookingMode
+): boolean {
+  if (original.bookingMode !== desiredMode) {
+    return false;
+  }
+
+  const oldTiers = original.ticketTiers ?? [];
+
+  return (
+    oldTiers.length === adminTiers.length &&
+    oldTiers.every((oldTier) =>
+      adminTiers.some(
+        (newTier) =>
+          newTier.id === oldTier.id &&
+          newTier.price === oldTier.price
+      )
+    )
+  );
+}
+
+/* ==========================================================
+   ADMIN EVENT → PUBLIC EVENT CONVERSION
+   ========================================================== */
+
+function convertAdminEvent(
+  adminEvent: StoredAdminEvent,
+  organizers: StoredAdminOrganizer[]
+): EventDetails {
+  const original = findMatchingStaticEvent(adminEvent);
+
+  const ticketTiers =
+    convertAdminTicketTiers(adminEvent);
+
+  const availableTiers = ticketTiers.filter(
+    (tier) => tier.available !== false
+  );
+
+  const startingPrice = availableTiers.length
+    ? Math.min(...availableTiers.map((tier) => tier.price))
+    : 0;
+
+  const mode = mapAdmissionType(
+    adminEvent.admissionType
+  );
+
+  const reuseDemoConfig = Boolean(
+    original &&
+    canReuseBookingConfiguration(
+      original,
+      ticketTiers,
+      mode
+    )
+  );
+
+  const organizer = organizers.find(
+    (item) => item.id === adminEvent.organizerId
+  );
+
+  /*
+   * A venue layout upload is a visual image.
+   * It does not create physical seat coordinates.
+   */
+
+  const venueLayoutImage =
+    adminEvent.venueLayoutImage || "";
+
+  const bookingZones: EventBookingZone[] | undefined =
+    mode === "zone"
+      ? reuseDemoConfig
+        ? original?.bookingZones
+        : undefined
+      : undefined;
+
+  const seatingConfig: EventSeatingConfig | undefined =
+    mode === "seat" && reuseDemoConfig
+      ? original?.seatingConfig
+      : undefined;
+
+  /*
+   * Reserved seating must not pretend that a visual
+   * image is an interactive numbered seat plan.
+   *
+   * Zone bookings without configured zone mappings
+   * are likewise not ready for checkout.
+   */
+
+  const configurationReady =
+    mode === "general" ||
+    (
+      mode === "zone" &&
+      Boolean(bookingZones?.length)
+    ) ||
+    (
+      mode === "seat" &&
+      Boolean(seatingConfig?.rows.length)
+    );
+
+  const organizerName =
+    organizer?.displayName ||
+    organizer?.name ||
+    original?.organizer ||
+    "Event Organizer";
+
+  const image =
+    adminEvent.imageUrl ||
+    original?.image ||
+    "/images/events/featured-event.png";
+
+  const slug =
+    original?.slug ||
+    `${createEventSlug(adminEvent.title)}-${createEventSlug(adminEvent.id)}`;
+
+  const location = [
+    adminEvent.city,
+    adminEvent.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const maxPerBooking = availableTiers.length
+    ? Math.max(
+        1,
+        Math.min(
+          10,
+          ...availableTiers.map(
+            (tier) => tier.maxQuantity ?? 10
+          )
+        )
+      )
+    : 10;
+
+  return {
+    id: original?.id || adminEvent.id,
+
+    title: adminEvent.title,
+    slug,
+
+    description: adminEvent.description,
+
+    fullDescription:
+      adminEvent.description ||
+      original?.fullDescription ||
+      "",
+
+    image,
+
+    date: displayEventDate(adminEvent.date),
+    dateISO: adminEvent.date,
+
+    time: displayEventTime(adminEvent.time),
+
+    location,
+    venue: adminEvent.venue,
+
+    category: adminEvent.category,
+
+    tags: original?.tags || [adminEvent.category],
+
+    eventType:
+      original?.eventType ||
+      adminEvent.category,
+
+    price: startingPrice,
+    currency: adminEvent.currency || "LKR",
+
+    featured: original?.featured ?? false,
+
+    organizer: organizerName,
+
+    bookingEnabled:
+      adminEvent.bookingEnabled !== false &&
+      configurationReady &&
+      availableTiers.length > 0,
+
+    bookingMode: mode,
+    bookingConfigurationDemo: true,
+
+    minTicketsPerBooking: 1,
+    maxTicketsPerBooking: maxPerBooking,
+
+    ticketTiers,
+    bookingZones,
+    seatingConfig,
+
+    venueDetails: {
+      name: adminEvent.venue,
+      city: adminEvent.city,
+      country: adminEvent.country,
+
+      mapImage:
+        venueLayoutImage ||
+        original?.venueDetails?.mapImage,
+
+      entranceInstructions:
+        adminEvent.venueNotes || undefined,
+    },
+
+    venueLayoutImage,
+
+    adminEventId: adminEvent.id,
+    organizerId: adminEvent.organizerId,
+
+    publicationStatus: adminEvent.status,
+    eventSource: "admin",
+
+    endDate: adminEvent.endDate || "",
+    endTime: adminEvent.endTime || "",
+
+    salesStart: adminEvent.salesStart || "",
+    salesEnd: adminEvent.salesEnd || "",
+
+    refundPolicy: adminEvent.refundPolicy || "",
+    terms: adminEvent.terms || "",
+  };
+}
+
+/* ==========================================================
+   GET THE PUBLIC EVENT CATALOGUE
+
+   Rules:
+
+   1. Without saved admin data, use the original static
+      demo events.
+
+   2. With saved admin data, the admin catalogue is
+      authoritative.
+
+   3. Only Published events are visible publicly.
+
+   4. Draft events do not appear.
+
+   5. Deleting an event from the admin catalogue also
+      removes it from the customer catalogue.
+
+   This avoids duplicate and inconsistent events.
+   ========================================================== */
+
+export function getPublicEvents(): EventDetails[] {
+  const adminEvents =
+    readStorageArray<StoredAdminEvent>(
+      ADMIN_EVENTS_STORAGE_KEY
+    );
+
+  /*
+   * No admin catalogue saved yet.
+   * Retain existing frontend demo events.
+   */
+
+  if (adminEvents === null) {
+    return staticEvents;
+  }
+
+  const organizers =
+    readStorageArray<StoredAdminOrganizer>(
+      ADMIN_ORGANIZERS_STORAGE_KEY
+    ) ?? [];
+
+  const published = adminEvents.filter(
+    (event) => event.status === "Published"
+  );
+
+  return published.map((event) =>
+    convertAdminEvent(event, organizers)
+  );
+}
+
+/* ==========================================================
+   BACKWARD COMPATIBILITY
+
+   Previous customer components import:
+     import { events } from "@/data/events";
+
+   Keep that export so existing imports compile.
+
+   IMPORTANT:
+   This is a snapshot, not a React subscription.
+
+   Customer components that need live updates must
+   call usePublicEvents() or getPublicEvents().
+   ========================================================== */
+
+export const events: EventDetails[] = getPublicEvents();
+
+/* ==========================================================
+   REACTIVE PUBLIC EVENT SUBSCRIPTION
+
+   The admin currently dispatches:
+     vizha-admin-data-changed
+
+   We also listen for the browser storage event to
+   detect changes from another tab on the same origin.
+   ========================================================== */
+
+let cachedStorageKey = "";
+let cachedEvents: EventDetails[] = events;
+
+const listeners = new Set<() => void>();
+
+let subscriptionCount = 0;
+
+function readCatalogueCacheKey(): string {
+  if (typeof window === "undefined") {
+    return "server";
+  }
+
+  try {
+    return [
+      window.localStorage.getItem(
+        ADMIN_EVENTS_STORAGE_KEY
+      ) ?? "null",
+
+      window.localStorage.getItem(
+        ADMIN_ORGANIZERS_STORAGE_KEY
+      ) ?? "null",
+    ].join("::");
+  } catch {
+    return "storage-unavailable";
+  }
+}
+
+function getPublicEventsSnapshot(): EventDetails[] {
+  const nextKey = readCatalogueCacheKey();
+
+  if (nextKey !== cachedStorageKey) {
+    cachedStorageKey = nextKey;
+    cachedEvents = getPublicEvents();
+  }
+
+  return cachedEvents;
+}
+
+function notifySubscribers(): void {
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+function handleCatalogueChange(): void {
+  cachedStorageKey = "";
+  notifySubscribers();
+}
+
+function subscribeToPublicEvents(
+  listener: () => void
+): () => void {
+  listeners.add(listener);
+
+  if (
+    typeof window !== "undefined" &&
+    subscriptionCount === 0
+  ) {
+    window.addEventListener(
+      ADMIN_DATA_CHANGE_EVENT,
+      handleCatalogueChange
+    );
+
+    window.addEventListener(
+      "storage",
+      handleCatalogueChange
+    );
+  }
+
+  subscriptionCount += 1;
+
+  return () => {
+    listeners.delete(listener);
+    subscriptionCount = Math.max(
+      0,
+      subscriptionCount - 1
+    );
+
+    if (
+      typeof window !== "undefined" &&
+      subscriptionCount === 0
+    ) {
+      window.removeEventListener(
+        ADMIN_DATA_CHANGE_EVENT,
+        handleCatalogueChange
+      );
+
+      window.removeEventListener(
+        "storage",
+        handleCatalogueChange
+      );
+    }
+  };
+}
+
+/* ==========================================================
+   USE IN CUSTOMER COMPONENTS
+
+   Example:
+
+   const events = usePublicEvents();
+
+   This updates when the admin saves or publishes events.
+   ========================================================== */
+
+export function usePublicEvents(): EventDetails[] {
+  return useSyncExternalStore(
+    subscribeToPublicEvents,
+    getPublicEventsSnapshot,
+    () => staticEvents
+  );
+}
+
+/* ==========================================================
    EVENT LOOKUP HELPERS
+
+   Lookup against current admin/public data instead
+   of the original static array.
    ========================================================== */
 
 export function getEventBySlug(
@@ -1004,7 +1457,7 @@ export function getEventBySlug(
 ): EventDetails | undefined {
   if (!slug) return undefined;
 
-  return events.find(
+  return getPublicEvents().find(
     (event) => event.slug === slug
   );
 }
@@ -1012,8 +1465,40 @@ export function getEventBySlug(
 export function getEventById(
   id: string
 ): EventDetails | undefined {
-  return events.find(
-    (event) => event.id === id
+  return getPublicEvents().find(
+    (event) =>
+      event.id === id ||
+      event.adminEventId === id
+  );
+}
+
+/* ==========================================================
+   REACTIVE EVENT LOOKUP
+
+   Useful on EventDetailPage and CheckoutPage.
+   ========================================================== */
+
+export function useEventBySlug(
+  slug: string | undefined
+): EventDetails | undefined {
+  const availableEvents = usePublicEvents();
+
+  return availableEvents.find(
+    (event) => event.slug === slug
+  );
+}
+
+export function useEventById(
+  id: string | undefined
+): EventDetails | undefined {
+  const availableEvents = usePublicEvents();
+
+  if (!id) return undefined;
+
+  return availableEvents.find(
+    (event) =>
+      event.id === id ||
+      event.adminEventId === id
   );
 }
 
@@ -1028,18 +1513,19 @@ export function getEventsByCategory(
     .trim()
     .toLowerCase();
 
+  const availableEvents = getPublicEvents();
+
   if (!normalized || normalized === "all") {
-    return events;
+    return availableEvents;
   }
 
-  return events.filter((event) => {
+  return availableEvents.filter((event) => {
     const categoryMatches =
       event.category.toLowerCase() === normalized;
 
     const tagMatches =
       event.tags?.some(
-        (tag) =>
-          tag.toLowerCase() === normalized
+        (tag) => tag.toLowerCase() === normalized
       ) ?? false;
 
     return categoryMatches || tagMatches;
@@ -1051,7 +1537,7 @@ export function getEventsByCategory(
    ========================================================== */
 
 export function getFeaturedEvents(): EventDetails[] {
-  return events.filter(
+  return getPublicEvents().filter(
     (event) => event.featured === true
   );
 }
@@ -1064,11 +1550,15 @@ export function getRelatedEvents(
   currentSlug: string,
   limit = 3
 ): EventDetails[] {
-  const current = getEventBySlug(currentSlug);
+  const availableEvents = getPublicEvents();
+
+  const current = availableEvents.find(
+    (event) => event.slug === currentSlug
+  );
 
   if (!current) return [];
 
-  return events
+  return availableEvents
     .filter(
       (event) =>
         event.slug !== current.slug &&
@@ -1081,58 +1571,53 @@ export function getRelatedEvents(
    BOOKING MODE HELPERS
    ========================================================== */
 
-/**
- * Determine how customers select admission.
- *
- * General:
- *   Ticket category + quantity.
- *
- * Zone:
- *   Event area + quantity.
- *
- * Seat:
- *   Individual seats from a seating layout.
- */
-
 export function getEventBookingMode(
   event: EventDetails
 ): EventBookingMode {
   return event.bookingMode ?? "general";
 }
 
-/**
- * Return whether the event has a supported
- * booking configuration.
- *
- * This only validates frontend configuration.
- * It does not prove availability or payment.
- */
+/* ==========================================================
+   BOOKING CONFIGURATION VALIDATION
+
+   A venue layout image alone is NOT a valid interactive
+   seat map or zone configuration.
+   ========================================================== */
 
 export function hasEventBookingConfiguration(
   event: EventDetails
 ): boolean {
-  const mode = getEventBookingMode(event);
-
   if (event.bookingEnabled === false) {
     return false;
   }
 
+  const mode = getEventBookingMode(event);
+
   if (mode === "general") {
-    return true;
+    return getEventTicketTiers(event).some(
+      (tier) => tier.available !== false
+    );
   }
 
   if (mode === "zone") {
     return Boolean(
-      event.bookingZones &&
-      event.bookingZones.length > 0 &&
-      event.ticketTiers?.length
+      event.bookingZones?.length &&
+      event.ticketTiers?.length &&
+      event.bookingZones.some(
+        (zone) =>
+          zone.available !== false &&
+          event.ticketTiers?.some(
+            (tier) =>
+              tier.id === zone.ticketTierId &&
+              tier.available !== false
+          )
+      )
     );
   }
 
   if (mode === "seat") {
     return Boolean(
-      event.seatingConfig &&
-      event.seatingConfig.rows.length > 0 &&
+      event.seatingConfig?.rows.length &&
       event.ticketTiers?.length
     );
   }
@@ -1143,13 +1628,6 @@ export function hasEventBookingConfiguration(
 /* ==========================================================
    TICKET CATEGORY HELPERS
    ========================================================== */
-
-/**
- * Get all configured ticket categories.
- *
- * If no categories exist, use the original
- * advertised event price.
- */
 
 export function getEventTicketTiers(
   event: EventDetails
@@ -1170,10 +1648,6 @@ export function getEventTicketTiers(
   ];
 }
 
-/**
- * Find a ticket category.
- */
-
 export function getEventTicketTier(
   event: EventDetails,
   tierId: string
@@ -1182,10 +1656,6 @@ export function getEventTicketTier(
     (tier) => tier.id === tierId
   );
 }
-
-/**
- * Get minimum advertised ticket price.
- */
 
 export function getEventStartingPrice(
   event: EventDetails
@@ -1198,7 +1668,7 @@ export function getEventStartingPrice(
         tier.price >= 0
     );
 
-  if (availableTiers.length === 0) {
+  if (!availableTiers.length) {
     return event.price;
   }
 
@@ -1208,10 +1678,6 @@ export function getEventStartingPrice(
     )
   );
 }
-
-/**
- * Format currency.
- */
 
 export function formatEventPrice(
   event: EventDetails,
@@ -1229,10 +1695,6 @@ export function formatEventPrice(
    ZONE SELECTION HELPERS
    ========================================================== */
 
-/**
- * Get the booking zones for an event.
- */
-
 export function getEventBookingZones(
   event: EventDetails
 ): EventBookingZone[] {
@@ -1243,10 +1705,6 @@ export function getEventBookingZones(
   return event.bookingZones ?? [];
 }
 
-/**
- * Find a single event zone.
- */
-
 export function getEventBookingZone(
   event: EventDetails,
   zoneId: string
@@ -1255,10 +1713,6 @@ export function getEventBookingZone(
     (zone) => zone.id === zoneId
   );
 }
-
-/**
- * Find the ticket tier belonging to a zone.
- */
 
 export function getZoneTicketTier(
   event: EventDetails,
@@ -1277,10 +1731,6 @@ export function getZoneTicketTier(
   );
 }
 
-/**
- * Get a zone's ticket price.
- */
-
 export function getZoneTicketPrice(
   event: EventDetails,
   zoneId: string
@@ -1290,7 +1740,10 @@ export function getZoneTicketPrice(
     zoneId
   );
 
-  if (!zone || zone.available === false) {
+  if (
+    !zone ||
+    zone.available === false
+  ) {
     return null;
   }
 
@@ -1299,7 +1752,10 @@ export function getZoneTicketPrice(
     zoneId
   );
 
-  if (!tier || tier.available === false) {
+  if (
+    !tier ||
+    tier.available === false
+  ) {
     return null;
   }
 
@@ -1310,10 +1766,6 @@ export function getZoneTicketPrice(
    INDIVIDUAL SEATING HELPERS
    ========================================================== */
 
-/**
- * Get the seating configuration.
- */
-
 export function getEventSeatingConfig(
   event: EventDetails
 ): EventSeatingConfig | undefined {
@@ -1323,10 +1775,6 @@ export function getEventSeatingConfig(
 
   return event.seatingConfig;
 }
-
-/**
- * Flatten all seating rows into an array of seats.
- */
 
 export function getEventSeats(
   event: EventDetails
@@ -1340,13 +1788,6 @@ export function getEventSeats(
   );
 }
 
-/**
- * Find a seat by its ID.
- *
- * Example:
- * getEventSeat(event, "A1")
- */
-
 export function getEventSeat(
   event: EventDetails,
   seatId: string
@@ -1356,19 +1797,19 @@ export function getEventSeat(
   );
 }
 
-/**
- * Check whether a seat is selectable.
- *
- * Frontend demo check only.
- */
-
 export function isEventSeatAvailable(
   event: EventDetails,
   seatId: string
 ): boolean {
-  const seat = getEventSeat(event, seatId);
+  const seat = getEventSeat(
+    event,
+    seatId
+  );
 
-  if (!seat || seat.status !== "available") {
+  if (
+    !seat ||
+    seat.status !== "available"
+  ) {
     return false;
   }
 
@@ -1378,13 +1819,10 @@ export function isEventSeatAvailable(
   );
 
   return Boolean(
-    tier && tier.available !== false
+    tier &&
+    tier.available !== false
   );
 }
-
-/**
- * Find the ticket category for a seat.
- */
 
 export function getSeatTicketTier(
   event: EventDetails,
@@ -1403,10 +1841,6 @@ export function getSeatTicketTier(
   );
 }
 
-/**
- * Get the seat's individual price.
- */
-
 export function getSeatTicketPrice(
   event: EventDetails,
   seatId: string
@@ -1424,27 +1858,14 @@ export function getSeatTicketPrice(
 }
 
 /* ==========================================================
-   MULTIPLE SELECTED SEATS
-
-   Used by the future SeatSelector component.
-
-   Example:
-   ["A1", "A2", "A3"]
-
-   The total is calculated from each seat's
-   configured ticket category.
-
+   SELECTED SEAT CALCULATION
    ========================================================== */
 
 export interface SelectedSeatsCalculation {
   seatIds: string[];
-
   quantity: number;
-
   subtotal: number;
-
   valid: boolean;
-
   error?: string;
 }
 
@@ -1458,7 +1879,8 @@ export function calculateSelectedSeats(
       quantity: 0,
       subtotal: 0,
       valid: false,
-      error: "This event does not use seat selection.",
+      error:
+        "This event does not use seat selection.",
     };
   }
 
@@ -1488,9 +1910,20 @@ export function calculateSelectedSeats(
 
   const config = getEventSeatingConfig(event);
 
+  if (!config) {
+    return {
+      seatIds,
+      quantity: 0,
+      subtotal: 0,
+      valid: false,
+      error:
+        "This event does not have a configured numbered seating plan.",
+    };
+  }
+
   const maximum = Math.min(
     event.maxTicketsPerBooking ?? 10,
-    config?.maxSeatsPerBooking ?? 10
+    config.maxSeatsPerBooking
   );
 
   const minimum =
@@ -1571,13 +2004,8 @@ export function validateEventTicketQuantity(
 }
 
 /* ==========================================================
-   EVENT VENUE HELPERS
+   VENUE HELPERS
    ========================================================== */
-
-/**
- * Return the event location displayed in the
- * booking information panel.
- */
 
 export function getEventVenueLabel(
   event: EventDetails
@@ -1589,11 +2017,6 @@ export function getEventVenueLabel(
     .filter(Boolean)
     .join(", ");
 }
-
-/**
- * Return whether actual venue coordinates
- * have been configured.
- */
 
 export function hasEventVenueCoordinates(
   event: EventDetails
@@ -1614,5 +2037,47 @@ export function hasEventVenueCoordinates(
 }
 
 /* ==========================================================
-   END OF EVENT CONFIGURATION
+   EVENT SALES WINDOW
+
+   This is a frontend display rule only.
+   Production enforcement belongs to the backend.
+   ========================================================== */
+
+export function isEventSalesWindowOpen(
+  event: EventDetails,
+  now: Date = new Date()
+): boolean {
+  if (event.bookingEnabled === false) {
+    return false;
+  }
+
+  const start = event.salesStart
+    ? new Date(event.salesStart)
+    : null;
+
+  const end = event.salesEnd
+    ? new Date(event.salesEnd)
+    : null;
+
+  if (
+    start &&
+    !Number.isNaN(start.getTime()) &&
+    now < start
+  ) {
+    return false;
+  }
+
+  if (
+    end &&
+    !Number.isNaN(end.getTime()) &&
+    now > end
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+/* ==========================================================
+   END OF SHARED EVENT DATA SYSTEM
    ========================================================== */

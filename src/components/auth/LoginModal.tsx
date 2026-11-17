@@ -1,5 +1,9 @@
 
-import { useState, type FormEvent } from "react";
+import {
+  useState,
+  type FormEvent,
+} from "react";
+
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -11,37 +15,52 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { useAuthModal } from "../../contexts/AuthModalContext";
-import { notifyCustomerSessionChanged } from "../../lib/customerSession";
+import {
+  useAuthModal,
+} from "../../contexts/AuthModalContext";
+
+import {
+  saveCustomerSession,
+} from "../../lib/customerSession";
+
+import {
+  isAdminPreviewCredential,
+  isAdminPreviewEmail,
+  startAdminPreviewSession,
+  logoutAdminPreview,
+} from "../../lib/adminPreviewSession";
 
 /* ==========================================================
-   VIZHATICKETS — PREMIUM LOGIN MODAL
+   VIZHATICKETS — SHARED SIGN IN MODAL
 
    React + Vite + TypeScript
 
-   CORRECTIONS
-   - Only ONE image in the entire left panel
-   - Full-width, full-height background image
-   - No duplicated picture
-   - No smaller overlay picture
-   - No additional image overlay
-   - Existing login design preserved
+   FEATURES
+   ----------------------------------------------------------
+   - Same login form for customers and admins
+   - Existing premium design preserved
    - Original Tamil logo preserved
+   - Single full-height image on left
    - Demo customer login preserved
-   - Shared customer session preserved
-   - Compatible with RegisterModal.tsx
+   - Development-only admin login added
+   - Google demo customer login preserved
+   - Secure backend login interface prepared
+   - Password visibility toggle
+   - Remember email option
+   - Forgot password navigation
+   - Sign Up modal preserved
+   - No public Admin Login button
+
+   IMPORTANT
+   ----------------------------------------------------------
+   The admin preview is NOT real authentication.
+
+   Actual admin access must be authorized by a backend.
+
    ========================================================== */
 
 /* ==========================================================
-   IMAGE CONFIGURATION
-
-   Only one image is rendered for each modal.
-
-   Login:
-   public/images/auth/login-left-image.png
-
-   Register:
-   public/images/auth/register-left-image.png
+   ASSETS
    ========================================================== */
 
 const LOGIN_LEFT_IMAGE =
@@ -57,20 +76,34 @@ const BRAND_LOGO =
    DEMO CUSTOMER CREDENTIALS
    ========================================================== */
 
-const DEMO_EMAIL = "demo@vizhatickets.lk";
-const DEMO_PASSWORD = "Demo@12345";
+const DEMO_CUSTOMER_EMAIL =
+  "demo@vizhatickets.lk";
 
-const SESSION_KEY = "vizha_mock_session";
-const USER_KEY = "vizha_mock_user";
+const DEMO_CUSTOMER_PASSWORD =
+  "Demo@12345";
 
-type DemoCustomer = {
+const REMEMBER_EMAIL_KEY =
+  "vizha_remembered_email";
+
+const AUTH_LOGIN_ENDPOINT =
+  "/api/auth/login";
+
+/* ==========================================================
+   TYPES
+   ========================================================== */
+
+interface ServerUser {
   id: string;
   name: string;
   email: string;
-  role: "customer";
-};
+  role: string;
+}
 
-type DemoProvider = "email" | "google-demo";
+interface LoginApiResponse {
+  success?: boolean;
+  message?: string;
+  user?: ServerUser;
+}
 
 /* ==========================================================
    GOOGLE ICON
@@ -107,59 +140,150 @@ function GoogleIcon() {
 }
 
 /* ==========================================================
-   SAVE DEMO SESSION
-
-   Matches customerSession.ts
+   REMEMBER EMAIL
    ========================================================== */
 
-function saveDemoSession(
-  user: DemoCustomer,
-  provider: DemoProvider
-): void {
-  const session = {
-    user,
-    isAuthenticated: true,
-    loginAt: new Date().toISOString(),
-    provider,
-    mode: "demo",
-  };
+function getRememberedEmail(): string {
+  if (typeof window === "undefined") return "";
 
-  window.sessionStorage.setItem(
-    USER_KEY,
-    JSON.stringify(user)
-  );
+  try {
+    return (
+      localStorage.getItem(REMEMBER_EMAIL_KEY) ?? ""
+    );
+  } catch {
+    return "";
+  }
+}
 
-  window.sessionStorage.setItem(
-    SESSION_KEY,
-    JSON.stringify(session)
-  );
-
-  notifyCustomerSessionChanged();
+function saveRememberedEmail(
+  enabled: boolean,
+  email: string
+) {
+  try {
+    if (enabled) {
+      localStorage.setItem(
+        REMEMBER_EMAIL_KEY,
+        email
+      );
+    } else {
+      localStorage.removeItem(
+        REMEMBER_EMAIL_KEY
+      );
+    }
+  } catch {
+    // Optional preference.
+  }
 }
 
 /* ==========================================================
-   REUSABLE LEFT ARTWORK
+   FUTURE BACKEND AUTHENTICATION
 
-   IMPORTANT:
+   The backend will:
+   - Validate the email and password
+   - Create an HTTP-only session cookie
+   - Return the authenticated account
+   - Verify admin roles on each protected request
 
-   This component uses ONE image only.
-
-   It works with:
-     <TicketArtwork />
-     <TicketArtwork register />
-     <TicketArtwork variant="login" />
-     <TicketArtwork variant="register" />
-
-   No additional images.
-   No smaller central illustration.
-   No added tagline.
-   No artificial overlays.
    ========================================================== */
 
-type TicketArtworkProps = {
+async function signInWithBackend(
+  email: string,
+  password: string
+): Promise<ServerUser> {
+  let response: Response;
+
+  try {
+    response = await fetch(
+      AUTH_LOGIN_ENDPOINT,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      }
+    );
+  } catch {
+    throw new Error(
+      "Unable to connect to the sign-in service."
+    );
+  }
+
+  if (
+    response.status === 404 ||
+    response.status === 405
+  ) {
+    throw new Error(
+      "Secure sign-in has not been configured yet."
+    );
+  }
+
+  if (
+    response.status === 401 ||
+    response.status === 403
+  ) {
+    throw new Error(
+      "Incorrect email address or password."
+    );
+  }
+
+  if (response.status === 429) {
+    throw new Error(
+      "Too many sign-in attempts. Please try later."
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      "Unable to sign in. Please try again."
+    );
+  }
+
+  let result: LoginApiResponse;
+
+  try {
+    result =
+      (await response.json()) as LoginApiResponse;
+  } catch {
+    throw new Error(
+      "The sign-in service returned an invalid response."
+    );
+  }
+
+  if (
+    result.success !== true ||
+    !result.user ||
+    typeof result.user.id !== "string" ||
+    typeof result.user.name !== "string" ||
+    typeof result.user.email !== "string" ||
+    typeof result.user.role !== "string"
+  ) {
+    throw new Error(
+      "Your account could not be verified."
+    );
+  }
+
+  return result.user;
+}
+
+/* ==========================================================
+   SINGLE IMAGE ARTWORK
+
+   Compatible with RegisterModal.tsx:
+   <TicketArtwork />
+   <TicketArtwork register />
+   <TicketArtwork variant="login" />
+   <TicketArtwork variant="register" />
+   ========================================================== */
+
+interface TicketArtworkProps {
   register?: boolean;
   variant?: "login" | "register";
-};
+}
 
 export function TicketArtwork({
   register = false,
@@ -176,16 +300,10 @@ export function TicketArtwork({
   return (
     <div
       className="
-        relative
-        hidden
-        min-h-142.5
-        overflow-hidden
-        bg-[#140b08]
-        lg:block
+        relative hidden min-h-142.5
+        overflow-hidden bg-[#140b08] lg:block
       "
     >
-      {/* ONLY ONE IMAGE — FILLS ENTIRE LEFT PANEL */}
-
       <img
         src={imageSource}
         alt={
@@ -197,13 +315,8 @@ export function TicketArtwork({
         loading="eager"
         decoding="async"
         className="
-          absolute
-          inset-0
-          block
-          h-full
-          w-full
-          object-cover
-          object-center
+          absolute inset-0 block h-full w-full
+          object-cover object-center
         "
       />
     </div>
@@ -222,36 +335,16 @@ export default function LoginModal() {
     openRegister,
   } = useAuthModal();
 
-  /* ========================================================
-     FORM STATE
-     ======================================================== */
+  const [email, setEmail] =
+    useState(getRememberedEmail);
 
-  const [email, setEmail] = useState(() => {
-    try {
-      return (
-        window.localStorage.getItem(
-          "vizha_remembered_email"
-        ) ?? ""
-      );
-    } catch {
-      return "";
-    }
-  });
-
-  const [password, setPassword] = useState("");
+  const [password, setPassword] =
+    useState("");
 
   const [rememberMe, setRememberMe] =
-    useState(() => {
-      try {
-        return Boolean(
-          window.localStorage.getItem(
-            "vizha_remembered_email"
-          )
-        );
-      } catch {
-        return false;
-      }
-    });
+    useState(
+      () => getRememberedEmail().length > 0
+    );
 
   const [showPassword, setShowPassword] =
     useState(false);
@@ -259,13 +352,14 @@ export default function LoginModal() {
   const [isSubmitting, setIsSubmitting] =
     useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   /* ========================================================
-     EMAIL LOGIN
+     EMAIL / PASSWORD LOGIN
      ======================================================== */
 
-  const onLogin = (
+  const onLogin = async (
     event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
@@ -277,89 +371,176 @@ export default function LoginModal() {
     const normalizedEmail =
       email.trim().toLowerCase();
 
-    if (!normalizedEmail) {
-      setError("Please enter your email address.");
-      return;
-    }
-
     if (
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
         normalizedEmail
       )
     ) {
-      setError("Please enter a valid email address.");
+      setError(
+        "Please enter a valid email address."
+      );
       return;
     }
 
     if (!password) {
-      setError("Please enter your password.");
-      return;
-    }
-
-    const validCredentials =
-      normalizedEmail === DEMO_EMAIL &&
-      password === DEMO_PASSWORD;
-
-    if (!validCredentials) {
-      setError("Incorrect email address or password.");
+      setError(
+        "Please enter your password."
+      );
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      /* Remember email only, never password */
+      /* ================================================
+         DEVELOPMENT ADMIN PREVIEW LOGIN
 
-      try {
-        if (rememberMe) {
-          window.localStorage.setItem(
-            "vizha_remembered_email",
-            DEMO_EMAIL
-          );
-        } else {
-          window.localStorage.removeItem(
-            "vizha_remembered_email"
+         This works only in Vite development mode.
+         It NEVER uses the customer session.
+         ================================================ */
+
+      if (
+        import.meta.env.DEV &&
+        isAdminPreviewEmail(normalizedEmail)
+      ) {
+        if (
+          !isAdminPreviewCredential(
+            normalizedEmail,
+            password
+          )
+        ) {
+          throw new Error(
+            "Incorrect email address or password."
           );
         }
-      } catch {
-        // Remembering the email is optional.
+
+        const started =
+          startAdminPreviewSession();
+
+        if (!started) {
+          throw new Error(
+            "Could not start the admin preview session."
+          );
+        }
+
+        saveRememberedEmail(
+          rememberMe,
+          normalizedEmail
+        );
+
+        setPassword("");
+        closeModal();
+
+        navigate("/admin", {
+          replace: true,
+        });
+
+        return;
       }
 
-      /* Create customer session */
+      /* ================================================
+         DEVELOPMENT DEMO CUSTOMER LOGIN
+         ================================================ */
 
-      saveDemoSession(
-        {
-          id: "vizha-demo-customer-001",
-          name: "Demo Customer",
-          email: DEMO_EMAIL,
-          role: "customer",
-        },
-        "email"
+      if (
+        import.meta.env.DEV &&
+        normalizedEmail === DEMO_CUSTOMER_EMAIL &&
+        password === DEMO_CUSTOMER_PASSWORD
+      ) {
+        logoutAdminPreview();
+
+        const saved = saveCustomerSession(
+          {
+            id: "vizha-demo-customer-001",
+            name: "Demo Customer",
+            email: DEMO_CUSTOMER_EMAIL,
+            role: "customer",
+          },
+          "email"
+        );
+
+        if (!saved) {
+          throw new Error(
+            "Unable to start your customer session."
+          );
+        }
+
+        saveRememberedEmail(
+          rememberMe,
+          normalizedEmail
+        );
+
+        setPassword("");
+        closeModal();
+        navigate("/");
+
+        return;
+      }
+
+      /* ================================================
+         FUTURE REAL ACCOUNT LOGIN
+         ================================================ */
+
+      const user =
+        await signInWithBackend(
+          normalizedEmail,
+          password
+        );
+
+      const role =
+        user.role.toLowerCase();
+
+      /* ================================================
+         ADMIN OR SUPER ADMIN
+
+         Navigation only; the backend must independently
+         validate the admin session and API permissions.
+         ================================================ */
+
+      if (
+        role === "admin" ||
+        role === "super_admin"
+      ) {
+        saveRememberedEmail(
+          rememberMe,
+          normalizedEmail
+        );
+
+        setPassword("");
+        closeModal();
+
+        navigate("/admin", {
+          replace: true,
+        });
+
+        return;
+      }
+
+      /*
+       * Real customer accounts will be connected
+       * to the centralized production auth context
+       * when the backend is implemented.
+       *
+       * Never copy a real backend account into the
+       * mock customer session.
+       */
+
+      throw new Error(
+        "Customer account integration is not configured yet."
       );
-
-      /* Clear password */
-
-      setPassword("");
-
-      /* Close modal without reloading homepage */
-
-      closeModal();
-    } catch (sessionError) {
-      console.error(
-        "VizhaTickets login session error:",
-        sessionError
-      );
-
+    } catch (loginError) {
       setError(
-        "Unable to start your demo session. Please check your browser settings."
+        loginError instanceof Error
+          ? loginError.message
+          : "Unable to sign in. Please try again."
       );
-
+    } finally {
       setIsSubmitting(false);
     }
   };
 
   /* ========================================================
-     GOOGLE DEMO LOGIN
+     GOOGLE DEMO — CUSTOMER ONLY
      ======================================================== */
 
   const googleDemoLogin = () => {
@@ -369,7 +550,15 @@ export default function LoginModal() {
     setIsSubmitting(true);
 
     try {
-      saveDemoSession(
+      if (!import.meta.env.DEV) {
+        throw new Error(
+          "Google sign-in is not configured yet."
+        );
+      }
+
+      logoutAdminPreview();
+
+      const saved = saveCustomerSession(
         {
           id: "vizha-google-demo-001",
           name: "Google Demo Customer",
@@ -379,15 +568,22 @@ export default function LoginModal() {
         "google-demo"
       );
 
+      if (!saved) {
+        throw new Error(
+          "Unable to start Google demo session."
+        );
+      }
+
       setPassword("");
       closeModal();
-    } catch (sessionError) {
-      console.error(
-        "VizhaTickets Google demo login error:",
-        sessionError
+      navigate("/");
+    } catch (loginError) {
+      setError(
+        loginError instanceof Error
+          ? loginError.message
+          : "Google demo login failed."
       );
-
-      setError("Unable to save your demo session.");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -407,55 +603,69 @@ export default function LoginModal() {
 
   return (
     <div className="grid min-h-142.5 lg:grid-cols-[40%_60%]">
-
-      {/* ==============================================
-          LEFT — SINGLE FULL-PANEL IMAGE
-          ============================================== */}
+      {/* LEFT IMAGE */}
 
       <TicketArtwork variant="login" />
 
-      {/* ==============================================
-          RIGHT — LOGIN FORM
-          ============================================== */}
+      {/* RIGHT FORM */}
 
-      <div className="flex min-w-0 flex-col justify-center bg-[linear-gradient(135deg,#fffdfb,#fff8f1)] px-6 py-8 sm:px-10 lg:px-9">
-
+      <div
+        className="
+          flex min-w-0 flex-col justify-center
+          bg-[linear-gradient(135deg,#fffdfb,#fff8f1)]
+          px-6 py-8 sm:px-10 lg:px-9
+        "
+      >
         {/* ORIGINAL TAMIL LOGO */}
 
         <img
           src={BRAND_LOGO}
           alt="VizhaTickets"
           draggable={false}
-          className="mx-auto mb-3 h-auto w-48.75 object-contain"
+          className="
+            mx-auto mb-3 h-auto w-48.75
+            object-contain
+          "
         />
 
-        {/* LOGIN HEADING */}
-
-        <h2 className="text-center font-serif text-[clamp(1.55rem,3vw,2rem)] font-extrabold tracking-[-0.045em] text-[#19130f]">
+        <h2
+          className="
+            text-center font-serif
+            text-[clamp(1.55rem,3vw,2rem)]
+            font-extrabold tracking-[-0.045em]
+            text-[#19130f]
+          "
+        >
           Sign In to Your Account
         </h2>
 
-        <p className="mt-1 text-center text-[12px] text-[#625c55]">
+        <p
+          className="
+            mt-1 text-center text-[12px]
+            text-[#625c55]
+          "
+        >
           Book events, manage tickets and more.
         </p>
 
-        {/* ==============================================
-            LOGIN FORM
-            ============================================== */}
+        {/* EMAIL / PASSWORD FORM */}
 
         <form
           onSubmit={onLogin}
           noValidate
           className="mt-5 space-y-3"
         >
-
           {/* EMAIL */}
 
           <div className="relative">
             <Mail
               size={18}
               aria-hidden="true"
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#ef6405]"
+              className="
+                pointer-events-none absolute left-4
+                top-1/2 -translate-y-1/2
+                text-[#ef6405]
+              "
             />
 
             <input
@@ -473,7 +683,17 @@ export default function LoginModal() {
               }}
               placeholder="Enter your email"
               aria-invalid={Boolean(error)}
-              className="h-11.5 w-full rounded-full border border-[#eadbd0] bg-white/85 pl-11 pr-4 text-sm outline-none transition-all duration-300 placeholder:text-[#8d8580] hover:border-[#e4ab72] focus:border-[#ed7b0b] focus:ring-4 focus:ring-[#f9a53b]/15 disabled:opacity-60"
+              className="
+                h-11.5 w-full rounded-full
+                border border-[#eadbd0] bg-white/85
+                pl-11 pr-4 text-sm outline-none
+                transition-all duration-300
+                placeholder:text-[#8d8580]
+                hover:border-[#e4ab72]
+                focus:border-[#ed7b0b]
+                focus:ring-4 focus:ring-[#f9a53b]/15
+                disabled:opacity-60
+              "
             />
           </div>
 
@@ -483,7 +703,11 @@ export default function LoginModal() {
             <LockKeyhole
               size={18}
               aria-hidden="true"
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#ef6405]"
+              className="
+                pointer-events-none absolute left-4
+                top-1/2 -translate-y-1/2
+                text-[#ef6405]
+              "
             />
 
             <input
@@ -501,16 +725,24 @@ export default function LoginModal() {
               }}
               placeholder="Enter your password"
               aria-invalid={Boolean(error)}
-              className="h-11.5 w-full rounded-full border border-[#eadbd0] bg-white/85 pl-11 pr-11 text-sm outline-none transition-all duration-300 placeholder:text-[#8d8580] hover:border-[#e4ab72] focus:border-[#ed7b0b] focus:ring-4 focus:ring-[#f9a53b]/15 disabled:opacity-60"
+              className="
+                h-11.5 w-full rounded-full
+                border border-[#eadbd0] bg-white/85
+                pl-11 pr-11 text-sm outline-none
+                transition-all duration-300
+                placeholder:text-[#8d8580]
+                hover:border-[#e4ab72]
+                focus:border-[#ed7b0b]
+                focus:ring-4 focus:ring-[#f9a53b]/15
+                disabled:opacity-60
+              "
             />
-
-            {/* SHOW / HIDE PASSWORD */}
 
             <button
               type="button"
               disabled={isSubmitting}
               onClick={() =>
-                setShowPassword((value) => !value)
+                setShowPassword((current) => !current)
               }
               aria-label={
                 showPassword
@@ -518,7 +750,16 @@ export default function LoginModal() {
                   : "Show password"
               }
               aria-pressed={showPassword}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-[#67615b] transition-colors hover:bg-[#fff0de] hover:text-[#e8790b] focus-visible:outline-2 focus-visible:outline-[#ed7b0b]"
+              className="
+                absolute right-3 top-1/2
+                -translate-y-1/2 rounded-full
+                p-1.5 text-[#67615b]
+                transition-colors
+                hover:bg-[#fff0de]
+                hover:text-[#e8790b]
+                focus-visible:outline-2
+                focus-visible:outline-[#ed7b0b]
+              "
             >
               {showPassword ? (
                 <EyeOff size={18} />
@@ -530,8 +771,18 @@ export default function LoginModal() {
 
           {/* REMEMBER EMAIL / FORGOT PASSWORD */}
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <label className="flex cursor-pointer items-center gap-2 font-medium text-[#29211c]">
+          <div
+            className="
+              flex flex-wrap items-center
+              justify-between gap-2 text-xs
+            "
+          >
+            <label
+              className="
+                flex cursor-pointer items-center gap-2
+                font-medium text-[#29211c]
+              "
+            >
               <input
                 type="checkbox"
                 checked={rememberMe}
@@ -539,52 +790,78 @@ export default function LoginModal() {
                 onChange={(event) =>
                   setRememberMe(event.target.checked)
                 }
-                className="h-4 w-4 cursor-pointer accent-[#f27b06]"
+                className="
+                  h-4 w-4 cursor-pointer
+                  accent-[#f27b06]
+                "
               />
-
               Remember email
             </label>
 
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="font-semibold text-[#df4907] transition-colors hover:text-[#b84105] hover:underline"
+              disabled={isSubmitting}
+              className="
+                font-semibold text-[#df4907]
+                transition-colors hover:text-[#b84105]
+                hover:underline disabled:opacity-50
+              "
             >
               Forgot password?
             </button>
           </div>
 
-          {/* VALIDATION ERROR */}
+          {/* ERROR */}
 
           {error && (
             <div
               role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+              className="
+                rounded-lg border border-red-200
+                bg-red-50 px-3 py-2
+                text-xs text-red-700
+              "
             >
               {error}
             </div>
           )}
 
-          {/* SIGN IN BUTTON */}
+          {/* SUBMIT */}
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="group flex h-11.5 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-linear-to-r from-[#ff9810] to-[#e62708] text-sm font-bold text-white shadow-[0_7px_17px_rgba(220,81,6,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-[#ed7b0b] disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none"
+            className="
+              group flex h-11.5 w-full
+              cursor-pointer items-center justify-center
+              gap-2 rounded-full
+              bg-linear-to-r from-[#ff9810] to-[#e62708]
+              text-sm font-bold text-white
+              shadow-[0_7px_17px_rgba(220,81,6,0.22)]
+              transition-all duration-300
+              hover:-translate-y-0.5 hover:shadow-lg
+              active:scale-[0.98]
+              focus-visible:outline-2
+              focus-visible:outline-[#ed7b0b]
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+              motion-reduce:transform-none
+            "
           >
             <ArrowRight
               size={18}
               aria-hidden="true"
-              className="transition-transform duration-300 group-hover:translate-x-1"
+              className="
+                transition-transform duration-300
+                group-hover:translate-x-1
+              "
             />
-
             {isSubmitting ? "Signing In..." : "Sign In"}
           </button>
         </form>
 
-        {/* ==============================================
-            SOCIAL LOGIN DIVIDER
-            ============================================== */}
+        {/* SOCIAL LOGIN DIVIDER */}
 
         <div className="my-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-[#e9ddd2]" />
@@ -596,68 +873,92 @@ export default function LoginModal() {
           <div className="h-px flex-1 bg-[#e9ddd2]" />
         </div>
 
-        {/* ==============================================
-            GOOGLE AND APPLE LOGIN
-            ============================================== */}
+        {/* SOCIAL OPTIONS */}
 
         <div className="space-y-2">
-
-          {/* GOOGLE DEMO LOGIN */}
-
           <button
             type="button"
             disabled={isSubmitting}
             onClick={googleDemoLogin}
-            className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[#e8dcd1] bg-white text-xs font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:border-[#ed9c54] hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="
+              flex h-10 w-full cursor-pointer
+              items-center justify-center gap-2
+              rounded-full border border-[#e8dcd1]
+              bg-white text-xs font-semibold
+              transition-all duration-300
+              hover:-translate-y-0.5
+              hover:border-[#ed9c54]
+              hover:shadow-md active:scale-[0.98]
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
           >
             <GoogleIcon />
-
             Continue with Google
-
             <span className="text-[10px] text-[#a66b24]">
               (Demo)
             </span>
           </button>
 
-          {/* APPLE — COMING SOON */}
-
           <button
             type="button"
             disabled
             title="Apple sign-in is not connected yet"
-            className="flex h-10 w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-[#e8dcd1] bg-white text-xs font-semibold text-[#666] opacity-55"
+            className="
+              flex h-10 w-full cursor-not-allowed
+              items-center justify-center gap-2
+              rounded-full border border-[#e8dcd1]
+              bg-white text-xs font-semibold
+              text-[#666] opacity-55
+            "
           >
             <span aria-hidden="true" className="text-base">
               ●
             </span>
-
             Continue with Apple — Coming Soon
           </button>
         </div>
 
-        {/* ==============================================
-            SWITCH TO SIGN UP MODAL
-            ============================================== */}
+        {/* SIGN UP */}
 
-        <div className="mt-4 text-center text-xs text-[#514942]">
+        <div
+          className="
+            mt-4 text-center text-xs
+            text-[#514942]
+          "
+        >
           Don't have an account?{" "}
-
           <button
             type="button"
             onClick={openRegister}
-            className="font-bold text-[#e04a06] transition-colors hover:text-[#b54105] hover:underline focus-visible:outline-2 focus-visible:outline-[#e8790b]"
+            disabled={isSubmitting}
+            className="
+              font-bold text-[#e04a06]
+              transition-colors hover:text-[#b54105]
+              hover:underline
+              focus-visible:outline-2
+              focus-visible:outline-[#e8790b]
+              disabled:opacity-50
+            "
           >
             Sign Up
           </button>
         </div>
 
-        {/* DEMO INFORMATION */}
+        {/* DEMO MESSAGE */}
 
-        <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-[#928273]">
-          <ShieldCheck size={13} aria-hidden="true" />
-          Demo authentication only
+        <div
+          className="
+            mt-3 flex items-center justify-center
+            gap-1.5 text-[10px] text-[#928273]
+          "
+        >
+          <ShieldCheck
+            size={13}
+            aria-hidden="true"
+          />
+          Frontend authentication preview
         </div>
-
       </div>
     </div>
   );

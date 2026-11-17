@@ -1,44 +1,44 @@
 
-import { useSyncExternalStore } from "react";
+import {
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 /* ==========================================================
-   VIZHATICKETS — CUSTOMER BOOKING STORAGE
+   VIZHATICKETS — CUSTOMER BOOKING DATA SYSTEM
 
    React + Vite + TypeScript
 
-   FEATURES
-   ----------------------------------------------------------
-   - General admission bookings
-   - Zone / area bookings
-   - Individual reserved-seat bookings
-   - Customer-specific booking history
-   - Multiple tickets under one booking
-   - One group QR per booking
-   - Backward compatibility with existing demo bookings
-   - Reactive booking updates
-   - Booking and ticket counts
-   - Booking lookup
-   - Demo QR payload generation
+   Supports:
+   - General admission tickets
+   - Custom ticket tiers (VIP, VVIP, Gold, etc.)
+   - Zone and stadium bookings
+   - Reserved numbered seating
+   - Customer booking history
+   - One QR payload per booking
+   - Multiple tickets within one booking
+   - Browser-local demo seat tracking
+   - Event-based demo reporting
+   - Category-wise demo ticket analysis
+   - Backward compatibility
+   - Reactively updated customer dashboards
 
-   IMPORTANT
-   ----------------------------------------------------------
-   Browser localStorage is used for DEMO purposes only.
+   IMPORTANT:
+   This is a DEVELOPMENT-ONLY booking data store.
 
-   This module does NOT provide:
-   - Secure server-side booking ownership
-   - Verified payments
-   - Real ticket admission
-   - Shared inventory
-   - Atomic seat reservations
+   Browser localStorage does not prove payment.
 
-   These require a production backend.
+   Real paid bookings, inventory, admission QR codes,
+   financial settlements and admin authorization
+   require a trusted backend.
    ========================================================== */
 
 /* ==========================================================
-   STORAGE CONFIGURATION
+   STORAGE
    ========================================================== */
 
-export const BOOKINGS_KEY = "vizha_demo_bookings_v1";
+export const BOOKINGS_KEY =
+  "vizha_demo_bookings_v1";
 
 export const BOOKINGS_CHANGE_EVENT =
   "vizha-demo-bookings-changed";
@@ -46,7 +46,7 @@ export const BOOKINGS_CHANGE_EVENT =
 const EMPTY_BOOKINGS = "[]";
 
 /* ==========================================================
-   BOOKING TYPES
+   TYPES
    ========================================================== */
 
 export type CustomerBookingMode =
@@ -59,12 +59,12 @@ export type CustomerPaymentMethod = "card";
 export type CustomerPaymentStatus = "demo";
 
 export type CustomerBookingStatus =
-  | "demo-confirmed";
+  "demo-confirmed";
 
 export type CustomerTicketStatus = "demo";
 
 /* ==========================================================
-   ATTENDEE
+   ATTENDEE DETAILS
    ========================================================== */
 
 export interface BookingAttendee {
@@ -77,135 +77,144 @@ export interface BookingAttendee {
 /* ==========================================================
    INDIVIDUAL TICKET
 
-   A booking can contain multiple ticket records.
+   Every ticket has its own reference.
 
-   Example:
-   One booking with 10 tickets will have:
-   - One booking reference
-   - Ten individual ticket references
-   - One group QR code
+   A separate QR code is NOT created for each ticket.
 
+   One parent booking carries one group QR.
    ========================================================== */
 
 export interface CustomerTicket {
   id: string;
-
   reference: string;
-
   status: CustomerTicketStatus;
 
-  /* New fields for reserved-seat bookings */
-
   seatId?: string;
-
-  /* Ticket category associated with this ticket */
-
   tierId?: string;
+
+  /* Optional future ticket allocation metadata */
+
+  tierName?: string;
+  unitPrice?: number;
 }
 
 /* ==========================================================
-   SELECTED SEAT
-
-   Stores seating information at the time of
-   booking confirmation.
-
-   Example:
-
-   {
-     id: "A1",
-     row: "A",
-     label: "A1",
-     tierId: "vip",
-     tierName: "Front Row Seating",
-     price: 3000
-   }
-
+   RESERVED SEAT
    ========================================================== */
 
 export interface CustomerBookingSeat {
   id: string;
-
   row: string;
-
   label: string;
 
   tierId: string;
-
   tierName: string;
 
   price: number;
 }
 
 /* ==========================================================
-   COMPLETE CUSTOMER BOOKING
+   TICKET CATEGORY ALLOCATION
 
-   Preserves the existing structure and adds the
-   new booking-mode fields as optional properties.
+   Used for accurate category-wise reporting.
 
-   Optional fields allow older stored bookings
-   to continue working without migration.
+   One booking may eventually contain:
+
+   VIP:
+     2 tickets
+
+   Gold:
+     3 tickets
+
+   Each category retains its own unit price.
+
+   NOTE:
+   The current checkout normally selects one general
+   category per booking. Reserved seating may include
+   multiple categories.
+   ========================================================== */
+
+export interface CustomerBookingTicketLine {
+  tierId: string;
+  tierName: string;
+
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+
+  zoneId?: string;
+  zoneName?: string;
+
+  seatIds?: string[];
+}
+
+/* ==========================================================
+   COMPLETE BOOKING RECORD
+
+   Required legacy fields are preserved.
+
+   New fields are optional so previously saved bookings
+   continue to work.
    ========================================================== */
 
 export interface CustomerBooking {
   /* Booking identity */
 
   id: string;
-
   reference: string;
 
-  /* Customer ownership */
+  /* Customer identity */
 
   customerId: string;
-
   customerEmail: string;
 
-  /* Event information */
+  /* Event identity */
 
   eventSlug: string;
 
+  /*
+   * Optional stable admin event ID.
+   * Prefer this ID for future reporting.
+   */
+
+  eventId?: string;
+  adminEventId?: string;
+
+  /* Event snapshot */
+
   eventTitle: string;
-
   eventImage: string;
-
   eventDate: string;
-
   eventTime: string;
-
   eventVenue: string;
 
-  /* Ticket category */
+  /* Legacy ticket category */
 
   ticketType: string;
-
   ticketTypeLabel: string;
 
-  /* Total number of tickets */
+  /* Total tickets */
 
   quantity: number;
 
-  /* Pricing */
+  /* Financial snapshot */
 
   currency: string;
-
   unitPrice: number;
-
   subtotal: number;
-
   serviceFee: number;
-
   total: number;
 
-  /* Customer contact information */
+  /* Attendee */
 
   attendee: BookingAttendee;
 
   /* Demo payment */
 
-  paymentMethod: string;
-
+  paymentMethod: CustomerPaymentMethod;
   paymentStatus: CustomerPaymentStatus;
 
-  /* Booking status */
+  /* Demo booking status */
 
   bookingStatus: CustomerBookingStatus;
 
@@ -213,57 +222,36 @@ export interface CustomerBooking {
 
   tickets: CustomerTicket[];
 
-  /* Booking date */
+  /* Date */
 
   createdAt: string;
 
-  /* Event policy acknowledgment */
+  /* Policy acknowledgement */
 
   policyVersion?: string;
-
   policyAcknowledgedAt?: string;
 
-  /* ======================================================
-     NEW — BOOKING CONFIGURATION
-     ====================================================== */
+  /* Booking mode */
 
   bookingMode?: CustomerBookingMode;
 
-  /* ======================================================
-     ZONE / AREA SELECTION
-
-     Example:
-     zoneId: "vip-front"
-     zoneName: "VIP — Front Area"
-     ====================================================== */
+  /* Zone selection */
 
   zoneId?: string;
-
   zoneName?: string;
 
-  /* ======================================================
-     INDIVIDUAL SEAT SELECTION
-
-     Example:
-     selectedSeatIds: ["A1", "A2", "B3"]
-
-     selectedSeats contains the seat category,
-     row, reference and ticket price.
-     ====================================================== */
+  /* Reserved seat selection */
 
   selectedSeatIds?: string[];
-
   selectedSeats?: CustomerBookingSeat[];
+
+  /* Optional category-level snapshot */
+
+  ticketLines?: CustomerBookingTicketLine[];
 }
 
 /* ==========================================================
-   BOOKING + TICKET RELATIONSHIP
-
-   Useful for My Tickets.
-
-   Each individual ticket can be associated with
-   its parent booking.
-
+   TICKET WITH PARENT BOOKING
    ========================================================== */
 
 export interface CustomerTicketWithBooking
@@ -272,7 +260,53 @@ export interface CustomerTicketWithBooking
 }
 
 /* ==========================================================
-   VALIDATION HELPERS
+   REPORTING TYPES
+
+   These represent DEMONSTRATION values only.
+
+   Never treat them as collected cash or verified
+   financial obligations.
+   ========================================================== */
+
+export interface DemoTicketTierReport {
+  tierId: string;
+  tierName: string;
+
+  quantity: number;
+  revenue: number;
+
+  currency: string;
+}
+
+export interface DemoEventBookingReport {
+  eventId: string;
+  eventSlug: string;
+
+  eventTitle: string;
+  currency: string | null;
+
+  totalBookings: number;
+  totalTickets: number;
+
+  demoTicketSubtotal: number;
+  demoServiceFees: number;
+  demoOrderTotal: number;
+
+  ticketTiers: DemoTicketTierReport[];
+
+  hasCompleteTierAllocation: boolean;
+
+  paymentVerified: false;
+  financialStatus: "DEMO_ONLY";
+
+  verifiedGrossRevenue: null;
+  verifiedCommission: null;
+  verifiedOrganizerPayable: null;
+  verifiedSettlementPaid: null;
+}
+
+/* ==========================================================
+   GENERIC VALIDATION HELPERS
    ========================================================== */
 
 function isObject(
@@ -300,6 +334,34 @@ function isFiniteNumber(
   return (
     typeof value === "number" &&
     Number.isFinite(value)
+  );
+}
+
+function isNonNegativeNumber(
+  value: unknown
+): value is number {
+  return (
+    isFiniteNumber(value) &&
+    value >= 0
+  );
+}
+
+function isPositiveInteger(
+  value: unknown
+): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0
+  );
+}
+
+function optionalString(
+  value: unknown
+): boolean {
+  return (
+    value === undefined ||
+    typeof value === "string"
   );
 }
 
@@ -337,19 +399,18 @@ function isValidTicket(
     isNonEmptyString(value.id) &&
     isNonEmptyString(value.reference) &&
     value.status === "demo" &&
+    optionalString(value.seatId) &&
+    optionalString(value.tierId) &&
+    optionalString(value.tierName) &&
     (
-      value.seatId === undefined ||
-      typeof value.seatId === "string"
-    ) &&
-    (
-      value.tierId === undefined ||
-      typeof value.tierId === "string"
+      value.unitPrice === undefined ||
+      isNonNegativeNumber(value.unitPrice)
     )
   );
 }
 
 /* ==========================================================
-   SELECTED SEAT VALIDATION
+   RESERVED SEAT VALIDATION
    ========================================================== */
 
 function isValidBookingSeat(
@@ -365,28 +426,64 @@ function isValidBookingSeat(
     isNonEmptyString(value.label) &&
     isNonEmptyString(value.tierId) &&
     isNonEmptyString(value.tierName) &&
-    isFiniteNumber(value.price) &&
-    value.price >= 0
+    isNonNegativeNumber(value.price)
+  );
+}
+
+/* ==========================================================
+   TICKET ALLOCATION VALIDATION
+   ========================================================== */
+
+function isValidTicketLine(
+  value: unknown
+): value is CustomerBookingTicketLine {
+  if (!isObject(value)) {
+    return false;
+  }
+
+  return (
+    isNonEmptyString(value.tierId) &&
+    isNonEmptyString(value.tierName) &&
+    isPositiveInteger(value.quantity) &&
+    isNonNegativeNumber(value.unitPrice) &&
+    isNonNegativeNumber(value.subtotal) &&
+    optionalString(value.zoneId) &&
+    optionalString(value.zoneName) &&
+    (
+      value.seatIds === undefined ||
+      (
+        Array.isArray(value.seatIds) &&
+        value.seatIds.every(
+          (item) => typeof item === "string"
+        )
+      )
+    )
   );
 }
 
 /* ==========================================================
    COMPLETE BOOKING VALIDATION
 
-   Older bookings may not contain bookingMode.
+   Supports older records which do not contain:
 
-   This is allowed for backward compatibility.
+   - eventId
+   - adminEventId
+   - ticketLines
+   - bookingMode
+   - selectedSeats
 
+   Only recognized demo bookings are accepted.
+
+   This intentionally does not recognize frontend
+   claims of real paid transactions.
    ========================================================== */
 
-function isValidBooking(
+export function isValidCustomerBooking(
   value: unknown
 ): value is CustomerBooking {
   if (!isObject(value)) {
     return false;
   }
-
-  /* Booking identity */
 
   if (
     !isNonEmptyString(value.id) ||
@@ -395,16 +492,12 @@ function isValidBooking(
     return false;
   }
 
-  /* Customer */
-
   if (
     !isNonEmptyString(value.customerId) ||
     typeof value.customerEmail !== "string"
   ) {
     return false;
   }
-
-  /* Event */
 
   if (
     !isNonEmptyString(value.eventSlug) ||
@@ -417,7 +510,12 @@ function isValidBooking(
     return false;
   }
 
-  /* Ticket category */
+  if (
+    !optionalString(value.eventId) ||
+    !optionalString(value.adminEventId)
+  ) {
+    return false;
+  }
 
   if (
     typeof value.ticketType !== "string" ||
@@ -426,44 +524,31 @@ function isValidBooking(
     return false;
   }
 
-  /* Quantity */
-
-  if (
-    !Number.isInteger(value.quantity) ||
-    (value.quantity as number) < 1
-  ) {
+  if (!isPositiveInteger(value.quantity)) {
     return false;
   }
 
-  /* Pricing */
-
   if (
-    typeof value.currency !== "string" ||
-    !isFiniteNumber(value.unitPrice) ||
-    !isFiniteNumber(value.subtotal) ||
-    !isFiniteNumber(value.serviceFee) ||
-    !isFiniteNumber(value.total)
+    !isNonEmptyString(value.currency) ||
+    !isNonNegativeNumber(value.unitPrice) ||
+    !isNonNegativeNumber(value.subtotal) ||
+    !isNonNegativeNumber(value.serviceFee) ||
+    !isNonNegativeNumber(value.total)
   ) {
     return false;
   }
-
-  /* Attendee */
 
   if (!isValidAttendee(value.attendee)) {
     return false;
   }
 
-  /* Payment status */
-
   if (
-    typeof value.paymentMethod !== "string" ||
+    value.paymentMethod !== "card" ||
     value.paymentStatus !== "demo" ||
     value.bookingStatus !== "demo-confirmed"
   ) {
     return false;
   }
-
-  /* Ticket records */
 
   if (
     !Array.isArray(value.tickets) ||
@@ -472,13 +557,16 @@ function isValidBooking(
     return false;
   }
 
-  /* Date */
-
-  if (typeof value.createdAt !== "string") {
+  if (!isNonEmptyString(value.createdAt)) {
     return false;
   }
 
-  /* Optional booking mode */
+  if (
+    !optionalString(value.policyVersion) ||
+    !optionalString(value.policyAcknowledgedAt)
+  ) {
+    return false;
+  }
 
   if (
     value.bookingMode !== undefined &&
@@ -489,23 +577,12 @@ function isValidBooking(
     return false;
   }
 
-  /* Optional zone */
-
   if (
-    value.zoneId !== undefined &&
-    typeof value.zoneId !== "string"
+    !optionalString(value.zoneId) ||
+    !optionalString(value.zoneName)
   ) {
     return false;
   }
-
-  if (
-    value.zoneName !== undefined &&
-    typeof value.zoneName !== "string"
-  ) {
-    return false;
-  }
-
-  /* Optional selected seat IDs */
 
   if (
     value.selectedSeatIds !== undefined &&
@@ -519,8 +596,6 @@ function isValidBooking(
     return false;
   }
 
-  /* Optional structured seats */
-
   if (
     value.selectedSeats !== undefined &&
     (
@@ -533,17 +608,24 @@ function isValidBooking(
     return false;
   }
 
+  if (
+    value.ticketLines !== undefined &&
+    (
+      !Array.isArray(value.ticketLines) ||
+      !value.ticketLines.every(isValidTicketLine)
+    )
+  ) {
+    return false;
+  }
+
   return true;
 }
 
 /* ==========================================================
-   PARSE CUSTOMER BOOKINGS
+   PARSE BOOKINGS
 
-   Invalid records are skipped.
-
-   We do not remove or overwrite existing storage
-   while reading it.
-
+   Invalid records are ignored without modifying
+   or deleting the original saved browser data.
    ========================================================== */
 
 export function parseCustomerBookings(
@@ -556,20 +638,14 @@ export function parseCustomerBookings(
       return [];
     }
 
-    return parsed.filter(isValidBooking);
+    return parsed.filter(isValidCustomerBooking);
   } catch {
     return [];
   }
 }
 
 /* ==========================================================
-   READ LOCAL STORAGE
-
-   Important for React useSyncExternalStore:
-
-   The snapshot is a primitive string, so React
-   receives a stable value until storage changes.
-
+   BROWSER STORAGE SNAPSHOT
    ========================================================== */
 
 function getSnapshot(): string {
@@ -587,18 +663,18 @@ function getSnapshot(): string {
   }
 }
 
-/* ==========================================================
-   SERVER SNAPSHOT
-
-   Used for SSR compatibility.
-   ========================================================== */
-
 function getServerSnapshot(): string {
   return EMPTY_BOOKINGS;
 }
 
 /* ==========================================================
-   SUBSCRIBE TO BOOKING CHANGES
+   REACTIVE BOOKING SUBSCRIPTION
+
+   Same browser:
+   BOOKING_CHANGE_EVENT
+
+   Other tabs, same origin:
+   storage event
    ========================================================== */
 
 function subscribe(
@@ -647,13 +723,9 @@ function subscribe(
 }
 
 /* ==========================================================
-   NOTIFY COMPONENTS
+   NOTIFY CUSTOMER BOOKING CHANGES
 
-   Call this after updating BOOKINGS_KEY.
-
-   The storage event does not fire in the same tab
-   that performed the localStorage write.
-
+   Call after updating BOOKINGS_KEY.
    ========================================================== */
 
 export function notifyCustomerBookingsChanged(): void {
@@ -667,17 +739,13 @@ export function notifyCustomerBookingsChanged(): void {
 }
 
 /* ==========================================================
-   GET ALL DEMO BOOKINGS
+   READ ALL DEMO BOOKINGS
 
-   This helper is intended for internal demo storage
-   operations. It does not enforce server authorization.
-
+   No real payment records are returned here.
    ========================================================== */
 
 export function getAllDemoBookings(): CustomerBooking[] {
-  return parseCustomerBookings(
-    getSnapshot()
-  ).sort(
+  return parseCustomerBookings(getSnapshot()).sort(
     (a, b) =>
       new Date(b.createdAt).getTime() -
       new Date(a.createdAt).getTime()
@@ -685,13 +753,9 @@ export function getAllDemoBookings(): CustomerBooking[] {
 }
 
 /* ==========================================================
-   GET BOOKINGS FOR ONE CUSTOMER
+   FILTER BOOKINGS BY CUSTOMER
 
-   Bookings are filtered by customerId.
-
-   This is browser-only display filtering, not
-   secure access control.
-
+   Browser-local filtering, not server authorization.
    ========================================================== */
 
 export function getCustomerBookings(
@@ -708,11 +772,7 @@ export function getCustomerBookings(
 }
 
 /* ==========================================================
-   GET BOOKING BY REFERENCE
-
-   A booking is returned only when its customerId
-   matches the supplied customerId.
-
+   FIND BOOKING BY REFERENCE
    ========================================================== */
 
 export function getCustomerBookingByReference(
@@ -732,7 +792,7 @@ export function getCustomerBookingByReference(
 }
 
 /* ==========================================================
-   GET ONE CUSTOMER'S TICKETS
+   FIND ALL TICKETS FOR A CUSTOMER
    ========================================================== */
 
 export function getCustomerTickets(
@@ -740,27 +800,24 @@ export function getCustomerTickets(
 ): CustomerTicketWithBooking[] {
   const bookings = getCustomerBookings(customerId);
 
-  return bookings.flatMap(
-    (booking) =>
-      booking.tickets.map(
-        (ticket) => ({
-          ...ticket,
-          booking,
-        })
-      )
+  return bookings.flatMap((booking) =>
+    booking.tickets.map((ticket) => ({
+      ...ticket,
+      booking,
+    }))
   );
 }
 
 /* ==========================================================
    CUSTOMER BOOKINGS HOOK
 
-   Reactively updates:
-
-   - Customer Dashboard
+   Used by:
+   - Dashboard
    - My Tickets
    - My Bookings
    - Booking Success
 
+   One group QR per parent booking.
    ========================================================== */
 
 export function useCustomerBookings(
@@ -772,66 +829,56 @@ export function useCustomerBookings(
     getServerSnapshot
   );
 
-  const bookings = parseCustomerBookings(raw)
-    .filter(
-      (booking) =>
-        Boolean(customerId) &&
-        booking.customerId === customerId
-    )
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime()
-    );
+  return useMemo(() => {
+    const bookings = parseCustomerBookings(raw)
+      .filter(
+        (booking) =>
+          Boolean(customerId) &&
+          booking.customerId === customerId
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() -
+          new Date(a.createdAt).getTime()
+      );
 
-  const tickets: CustomerTicketWithBooking[] =
-    bookings.flatMap((booking) =>
-      booking.tickets.map(
-        (ticket) => ({
+    const tickets: CustomerTicketWithBooking[] =
+      bookings.flatMap((booking) =>
+        booking.tickets.map((ticket) => ({
           ...ticket,
           booking,
-        })
-      )
-    );
+        }))
+      );
 
-  return {
-    bookings,
+    return {
+      bookings,
+      tickets,
 
-    tickets,
+      totalBookings: bookings.length,
+      totalTickets: tickets.length,
 
-    totalBookings: bookings.length,
-
-    totalTickets: tickets.length,
-
-    /* One group QR for each booking */
-
-    totalGroupQRCodes: bookings.length,
-  };
+      totalGroupQRCodes: bookings.length,
+    };
+  }, [raw, customerId]);
 }
 
 /* ==========================================================
-   FORMAT BOOKING MONEY
+   BOOKING MONEY FORMAT
    ========================================================== */
 
 export function formatBookingMoney(
   currency: string,
   value: number
 ): string {
-  return `${currency} ${value.toLocaleString(
-    "en-LK",
-    {
-      maximumFractionDigits: 2,
-    }
-  )}`;
+  return `${currency} ${value.toLocaleString("en-LK", {
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 /* ==========================================================
-   RESOLVE BOOKING MODE
+   GET BOOKING MODE
 
-   Older bookings without bookingMode default
-   to general admission unless seat/zone
-   data indicates otherwise.
-
+   Backward compatible with older records.
    ========================================================== */
 
 export function getCustomerBookingMode(
@@ -855,10 +902,7 @@ export function getCustomerBookingMode(
     return "seat";
   }
 
-  if (
-    booking.zoneId ||
-    booking.zoneName
-  ) {
+  if (booking.zoneId || booking.zoneName) {
     return "zone";
   }
 
@@ -867,11 +911,6 @@ export function getCustomerBookingMode(
 
 /* ==========================================================
    GET SELECTED SEAT IDS
-
-   Prefer structured booking data.
-
-   Fall back to individual ticket seat IDs.
-
    ========================================================== */
 
 export function getBookingSelectedSeatIds(
@@ -909,19 +948,19 @@ export function getBookingSelectedSeatLabels(
     );
   }
 
-  return getBookingSelectedSeatIds(
-    booking
-  );
+  return getBookingSelectedSeatIds(booking);
 }
 
 /* ==========================================================
-   GET BOOKING AREA LABEL
+   GET BOOKING AREA NAME
    ========================================================== */
 
 export function getBookingAreaLabel(
   booking: CustomerBooking
 ): string | null {
-  if (getCustomerBookingMode(booking) !== "zone") {
+  if (
+    getCustomerBookingMode(booking) !== "zone"
+  ) {
     return null;
   }
 
@@ -933,26 +972,503 @@ export function getBookingAreaLabel(
 }
 
 /* ==========================================================
-   BUILD GROUP BOOKING QR PAYLOAD
+   DERIVE TICKET CATEGORY ALLOCATIONS
 
-   ONE QR = ONE COMPLETE BOOKING
+   Priority:
 
-   The QR contains:
-   - Demo-only status
-   - Booking reference
-   - Event information
-   - Ticket quantity
-   - Ticket category
-   - Selected area or seats
-   - Individual ticket references
+   1. Explicit ticketLines on the booking.
+   2. Reserved seats with tier IDs and prices.
+   3. Individual tickets with tier IDs and prices.
+   4. Legacy one-category booking.
 
-   No personal contact details or sensitive
-   card information are embedded.
+   The fallback is marked incomplete when category
+   identity is missing or cannot be established.
 
-   IMPORTANT:
-   This is a readable DEMO payload.
-   It must not be used for real admission.
+   All amounts remain DEMO values.
+   ========================================================== */
 
+export interface ResolvedTicketAllocations {
+  lines: CustomerBookingTicketLine[];
+
+  complete: boolean;
+
+  source:
+    | "explicit"
+    | "reserved-seats"
+    | "tickets"
+    | "legacy"
+    | "unavailable";
+}
+
+export function resolveBookingTicketAllocations(
+  booking: CustomerBooking
+): ResolvedTicketAllocations {
+  /* Explicit allocations */
+
+  if (booking.ticketLines?.length) {
+    const quantity = booking.ticketLines.reduce(
+      (sum, line) => sum + line.quantity,
+      0
+    );
+
+    const lineSubtotal = booking.ticketLines.reduce(
+      (sum, line) => sum + line.subtotal,
+      0
+    );
+
+    const accurate =
+      quantity === booking.quantity &&
+      Math.abs(lineSubtotal - booking.subtotal) < 0.011;
+
+    return {
+      lines: booking.ticketLines,
+      complete: accurate,
+      source: "explicit",
+    };
+  }
+
+  /* Reserved seating */
+
+  if (
+    getCustomerBookingMode(booking) === "seat" &&
+    booking.selectedSeats?.length
+  ) {
+    const grouped = new Map<
+      string,
+      CustomerBookingTicketLine
+    >();
+
+    for (const seat of booking.selectedSeats) {
+      const existing = grouped.get(seat.tierId);
+
+      if (existing) {
+        existing.quantity += 1;
+        existing.subtotal += seat.price;
+        existing.seatIds = [
+          ...(existing.seatIds ?? []),
+          seat.id,
+        ];
+      } else {
+        grouped.set(seat.tierId, {
+          tierId: seat.tierId,
+          tierName: seat.tierName,
+          quantity: 1,
+          unitPrice: seat.price,
+          subtotal: seat.price,
+          seatIds: [seat.id],
+        });
+      }
+    }
+
+    const lines = Array.from(grouped.values());
+
+    const calculatedTotal = lines.reduce(
+      (sum, line) => sum + line.subtotal,
+      0
+    );
+
+    return {
+      lines,
+      complete:
+        booking.selectedSeats.length ===
+          booking.quantity &&
+        Math.abs(
+          calculatedTotal - booking.subtotal
+        ) < 0.011,
+      source: "reserved-seats",
+    };
+  }
+
+  /* Individual tickets */
+
+  if (
+    booking.tickets.length === booking.quantity &&
+    booking.tickets.length > 0 &&
+    booking.tickets.every(
+      (ticket) => isNonEmptyString(ticket.tierId)
+    )
+  ) {
+    const grouped = new Map<
+      string,
+      CustomerBookingTicketLine
+    >();
+
+    const tierPricesKnown =
+      booking.tickets.every(
+        (ticket) =>
+          ticket.unitPrice === undefined ||
+          isNonNegativeNumber(ticket.unitPrice)
+      );
+
+    for (const ticket of booking.tickets) {
+      const tierId = ticket.tierId!;
+
+      const price =
+        ticket.unitPrice ??
+        booking.unitPrice;
+
+      const existing = grouped.get(tierId);
+
+      if (existing) {
+        existing.quantity += 1;
+        existing.subtotal += price;
+      } else {
+        grouped.set(tierId, {
+          tierId,
+          tierName:
+            ticket.tierName ||
+            booking.ticketTypeLabel ||
+            tierId,
+
+          quantity: 1,
+          unitPrice: price,
+          subtotal: price,
+
+          ...(booking.zoneId
+            ? {
+                zoneId: booking.zoneId,
+                zoneName: booking.zoneName,
+              }
+            : {}),
+        });
+      }
+    }
+
+    const lines = Array.from(grouped.values());
+
+    const calculatedSubtotal = lines.reduce(
+      (sum, line) => sum + line.subtotal,
+      0
+    );
+
+    const consistentPrices =
+      lines.every(
+        (line) =>
+          Math.abs(
+            line.subtotal -
+              line.unitPrice * line.quantity
+          ) < 0.011
+      );
+
+    return {
+      lines,
+      complete:
+        tierPricesKnown &&
+        consistentPrices &&
+        Math.abs(
+          calculatedSubtotal - booking.subtotal
+        ) < 0.011,
+      source: "tickets",
+    };
+  }
+
+  /* Legacy general admission record */
+
+  if (
+    getCustomerBookingMode(booking) === "general" &&
+    isNonEmptyString(booking.ticketTypeLabel)
+  ) {
+    const tierId =
+      booking.tickets.find(
+        (ticket) => isNonEmptyString(ticket.tierId)
+      )?.tierId;
+
+    if (tierId) {
+      const expected =
+        booking.unitPrice * booking.quantity;
+
+      return {
+        lines: [
+          {
+            tierId,
+            tierName: booking.ticketTypeLabel,
+            quantity: booking.quantity,
+            unitPrice: booking.unitPrice,
+            subtotal: booking.subtotal,
+          },
+        ],
+        complete:
+          Math.abs(expected - booking.subtotal) <
+          0.011,
+        source: "legacy",
+      };
+    }
+  }
+
+  return {
+    lines: [],
+    complete: false,
+    source: "unavailable",
+  };
+}
+
+/* ==========================================================
+   GET DEMO BOOKINGS BY EVENT
+
+   Match by stable event ID when present, or by slug
+   for compatibility with existing customer records.
+
+   The caller should provide the admin ID and slug.
+   ========================================================== */
+
+export function getDemoBookingsByEvent(
+  eventId: string,
+  eventSlug?: string
+): CustomerBooking[] {
+  if (!eventId && !eventSlug) {
+    return [];
+  }
+
+  return getAllDemoBookings().filter((booking) => {
+    if (
+      eventId &&
+      (
+        booking.eventId === eventId ||
+        booking.adminEventId === eventId
+      )
+    ) {
+      return true;
+    }
+
+    return Boolean(
+      eventSlug &&
+      booking.eventSlug === eventSlug
+    );
+  });
+}
+
+/* ==========================================================
+   BUILD DEMO EVENT REPORT
+
+   The report deliberately does not invent:
+
+   - Gateway payment confirmation
+   - Actual money collected
+   - Platform profit
+   - Organizer payout
+   - Settlement balance
+
+   These values require authoritative backend records.
+   ========================================================== */
+
+function buildDemoEventReport(
+  bookings: CustomerBooking[],
+  eventId: string,
+  eventSlug: string,
+  expectedCurrency?: string
+): DemoEventBookingReport {
+  const matching = bookings.filter((booking) => {
+    return (
+      (
+        Boolean(eventId) &&
+        (
+          booking.eventId === eventId ||
+          booking.adminEventId === eventId
+        )
+      ) ||
+      (
+        Boolean(eventSlug) &&
+        booking.eventSlug === eventSlug
+      )
+    );
+  });
+
+  const currencies = [
+    ...new Set(
+      matching.map((booking) => booking.currency)
+    ),
+  ];
+
+  const currency =
+    expectedCurrency ||
+    (
+      currencies.length === 1
+        ? currencies[0]
+        : null
+    );
+
+  /*
+   * Different currencies must never be combined
+   * into one financial amount.
+   */
+
+  const consistentCurrency =
+    currency !== null &&
+    matching.every(
+      (booking) => booking.currency === currency
+    );
+
+  const totalTickets = matching.reduce(
+    (sum, booking) => sum + booking.quantity,
+    0
+  );
+
+  const demoTicketSubtotal =
+    consistentCurrency
+      ? matching.reduce(
+          (sum, booking) =>
+            sum + booking.subtotal,
+          0
+        )
+      : 0;
+
+  const demoServiceFees =
+    consistentCurrency
+      ? matching.reduce(
+          (sum, booking) =>
+            sum + booking.serviceFee,
+          0
+        )
+      : 0;
+
+  const demoOrderTotal =
+    consistentCurrency
+      ? matching.reduce(
+          (sum, booking) =>
+            sum + booking.total,
+          0
+        )
+      : 0;
+
+  const grouped = new Map<
+    string,
+    DemoTicketTierReport
+  >();
+
+  let complete = consistentCurrency;
+
+  for (const booking of matching) {
+    const allocation =
+      resolveBookingTicketAllocations(booking);
+
+    if (!allocation.complete) {
+      complete = false;
+      continue;
+    }
+
+    if (!consistentCurrency) {
+      continue;
+    }
+
+    for (const line of allocation.lines) {
+      const existing = grouped.get(line.tierId);
+
+      if (existing) {
+        existing.quantity += line.quantity;
+        existing.revenue += line.subtotal;
+      } else {
+        grouped.set(line.tierId, {
+          tierId: line.tierId,
+          tierName: line.tierName,
+
+          quantity: line.quantity,
+          revenue: line.subtotal,
+
+          currency: booking.currency,
+        });
+      }
+    }
+  }
+
+  const ticketTiers = Array.from(
+    grouped.values()
+  );
+
+  if (
+    ticketTiers.reduce(
+      (sum, tier) => sum + tier.quantity,
+      0
+    ) !== totalTickets
+  ) {
+    complete = false;
+  }
+
+  return {
+    eventId,
+    eventSlug,
+
+    eventTitle:
+      matching[0]?.eventTitle || "",
+
+    currency:
+      consistentCurrency ? currency : null,
+
+    totalBookings: matching.length,
+    totalTickets,
+
+    demoTicketSubtotal,
+    demoServiceFees,
+    demoOrderTotal,
+
+    ticketTiers,
+
+    hasCompleteTierAllocation: complete,
+
+    paymentVerified: false,
+    financialStatus: "DEMO_ONLY",
+
+    verifiedGrossRevenue: null,
+    verifiedCommission: null,
+    verifiedOrganizerPayable: null,
+    verifiedSettlementPaid: null,
+  };
+}
+
+export function getDemoEventBookingReport(
+  eventId: string,
+  eventSlug: string,
+  currency?: string
+): DemoEventBookingReport {
+  return buildDemoEventReport(
+    getAllDemoBookings(),
+    eventId,
+    eventSlug,
+    currency
+  );
+}
+
+/* ==========================================================
+   REACTIVE DEMO EVENT REPORT HOOK
+
+   Useful for the future Admin Reports integration.
+
+   Must be labelled DEMO.
+   ========================================================== */
+
+export function useDemoEventBookingReport(
+  eventId: string,
+  eventSlug: string,
+  currency?: string
+): DemoEventBookingReport {
+  const raw = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  );
+
+  return useMemo(() => {
+    return buildDemoEventReport(
+      parseCustomerBookings(raw),
+      eventId,
+      eventSlug,
+      currency
+    );
+  }, [raw, eventId, eventSlug, currency]);
+}
+
+/* ==========================================================
+   RESOLVE GROUP QR BOOKING MODE
+   ========================================================== */
+
+/* ==========================================================
+   DEMO GROUP QR PAYLOAD
+
+   ONE QR = ONE BOOKING
+
+   No attendee email, phone, payment data or other
+   private customer information is embedded.
+
+   Not valid for real admission.
    ========================================================== */
 
 export interface DemoGroupQRPayload {
@@ -963,24 +1479,24 @@ export interface DemoGroupQRPayload {
   bookingReference: string;
 
   eventSlug: string;
-
   eventTitle: string;
-
   eventDate: string;
-
   eventTime: string;
-
   eventVenue: string;
 
   bookingMode: CustomerBookingMode;
 
   quantity: number;
-
   ticketCategory: string;
 
   zoneName?: string;
-
   selectedSeats?: string[];
+
+  ticketLines?: Array<{
+    tierId: string;
+    tierName: string;
+    quantity: number;
+  }>;
 
   tickets: Array<{
     reference: string;
@@ -988,6 +1504,10 @@ export interface DemoGroupQRPayload {
     tierId?: string;
   }>;
 }
+
+/* ==========================================================
+   BUILD ONE GROUP QR
+   ========================================================== */
 
 export function getDemoGroupQRPayload(
   booking: CustomerBooking
@@ -997,6 +1517,9 @@ export function getDemoGroupQRPayload(
 
   const seatIds =
     getBookingSelectedSeatIds(booking);
+
+  const allocations =
+    resolveBookingTicketAllocations(booking);
 
   const tickets = booking.tickets.map(
     (ticket, index) => {
@@ -1024,25 +1547,19 @@ export function getDemoGroupQRPayload(
 
   return {
     type: "VIZHATICKETS_DEMO_GROUP_BOOKING",
-
     status: "NOT_VALID_FOR_ENTRY",
 
     bookingReference: booking.reference,
 
     eventSlug: booking.eventSlug,
-
     eventTitle: booking.eventTitle,
-
     eventDate: booking.eventDate,
-
     eventTime: booking.eventTime,
-
     eventVenue: booking.eventVenue,
 
     bookingMode,
 
     quantity: booking.quantity,
-
     ticketCategory: booking.ticketTypeLabel,
 
     ...(bookingMode === "zone"
@@ -1060,6 +1577,17 @@ export function getDemoGroupQRPayload(
         }
       : {}),
 
+    ...(allocations.complete
+      ? {
+          ticketLines:
+            allocations.lines.map((line) => ({
+              tierId: line.tierId,
+              tierName: line.tierName,
+              quantity: line.quantity,
+            })),
+        }
+      : {}),
+
     tickets,
   };
 }
@@ -1067,14 +1595,14 @@ export function getDemoGroupQRPayload(
 /* ==========================================================
    GROUP QR STRING
 
-   Can be passed directly to QRCodeSVG.
-
-   Example:
+   Usage:
 
    <QRCodeSVG
      value={getDemoGroupQRValue(booking)}
    />
 
+   This QR is a demonstration and must never be
+   accepted at a real venue gate.
    ========================================================== */
 
 export function getDemoGroupQRValue(
@@ -1086,36 +1614,32 @@ export function getDemoGroupQRValue(
 }
 
 /* ==========================================================
-   LEGACY INDIVIDUAL TICKET QR
+   LEGACY TICKET QR PAYLOAD
 
-   Kept for compatibility with any older
-   component importing this function.
+   Retained for existing components.
 
-   New group bookings should use:
+   For the correct one-QR-per-booking implementation,
+   use getDemoGroupQRValue() instead.
 
-   getDemoGroupQRPayload()
-   getDemoGroupQRValue()
-
+   This returns a demo-only identifier, not an
+   admission-valid QR.
    ========================================================== */
 
 export function getDemoTicketQRPayload(
   booking: CustomerBooking,
   ticket: CustomerTicket
-) {
+): string {
   return JSON.stringify({
     type: "VIZHATICKETS_DEMO_TICKET",
 
     bookingReference: booking.reference,
-
     ticketReference: ticket.reference,
 
     bookingMode:
       getCustomerBookingMode(booking),
 
     ...(ticket.seatId
-      ? {
-          seatId: ticket.seatId,
-        }
+      ? { seatId: ticket.seatId }
       : {}),
 
     status: "NOT_VALID_FOR_ENTRY",
@@ -1123,5 +1647,5 @@ export function getDemoTicketQRPayload(
 }
 
 /* ==========================================================
-   END — CUSTOMER BOOKINGS MODULE
+   END — VIZHATICKETS CUSTOMER BOOKINGS
    ========================================================== */

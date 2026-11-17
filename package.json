@@ -16,6 +16,7 @@
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^14.0.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.53.0",
     "qrcode.react": "^4.2.0",
     "react": "19.3.0",

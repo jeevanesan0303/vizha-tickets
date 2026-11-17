@@ -1,30 +1,53 @@
 
-import { useSyncExternalStore } from "react";
+import {
+  useSyncExternalStore,
+} from "react";
 
 /* ==========================================================
    VIZHATICKETS — CUSTOMER SESSION MANAGEMENT
 
    React + Vite + TypeScript
 
-   FEATURES
-   - Shared customer authentication state
+   UPDATED:
+   ----------------------------------------------------------
+   - Preserves existing customer authentication API
    - Compatible with LoginModal and RegisterModal
-   - Immediate header updates
-   - Session restoration after refresh
-   - Customer profile updates
-   - Logout
-   - Session validation
-   - React 19 useSyncExternalStore compatibility
+   - Compatible with CustomerMenu and Header
+   - React 19 useSyncExternalStore compatible
+   - Immediate customer login/logout updates
+   - Session restoration after page refresh
+   - Demo customer session expiration
+   - Stronger session validation
+   - Customer profile editing preserved
+   - International telephone number validation
+   - Admin roles rejected from demo customer sessions
+   - Ready for future server-side authentication
+   - No administrator permissions stored here
 
-   IMPORTANT
-   - Frontend demo authentication only
-   - Not suitable as production authentication
-   - Does not store passwords
-   - Does not validate users against a backend
+   SECURITY:
+   ----------------------------------------------------------
+   This file manages DEMO customer sessions only.
+
+   sessionStorage is controlled by the browser user.
+
+   Never use this file alone to authorize:
+   - Admin dashboard access
+   - Event publishing
+   - Ticket issuance
+   - Payment processing
+   - Refunds
+   - Organizer settlements
+
+   The backend must verify real authenticated users.
+
    ========================================================== */
 
 /* ==========================================================
    STORAGE KEYS
+
+   KEEP THESE NAMES UNCHANGED.
+
+   Existing LoginModal and RegisterModal use them.
    ========================================================== */
 
 export const CUSTOMER_SESSION_KEY =
@@ -35,6 +58,18 @@ export const CUSTOMER_USER_KEY =
 
 export const CUSTOMER_SESSION_EVENT =
   "vizha-customer-session-changed";
+
+/* ==========================================================
+   DEMO SESSION CONFIGURATION
+
+   Maximum demo session: 4 hours
+
+   This is a frontend convenience, not a production
+   authentication security boundary.
+   ========================================================== */
+
+const DEMO_SESSION_DURATION_MS =
+  4 * 60 * 60 * 1000;
 
 /* ==========================================================
    TYPES
@@ -72,6 +107,36 @@ export interface UpdateCustomerProfileInput {
 }
 
 /* ==========================================================
+   FUTURE BACKEND AUTHENTICATION TYPES
+
+   The backend will eventually verify both customers
+   and administrators using a secure session cookie.
+
+   These types describe possible verified accounts.
+   They DO NOT grant any permissions.
+   ========================================================== */
+
+export type AccountRole =
+  | "customer"
+  | "admin"
+  | "super_admin"
+  | "event_manager"
+  | "booking_manager"
+  | "finance_manager";
+
+export interface VerifiedAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: AccountRole;
+}
+
+export interface VerifiedAuthResponse {
+  authenticated: boolean;
+  user?: VerifiedAccount;
+}
+
+/* ==========================================================
    SAFE BROWSER STORAGE
    ========================================================== */
 
@@ -88,7 +153,7 @@ function getStorage(): Storage | null {
 }
 
 /* ==========================================================
-   SESSION VALIDATION HELPERS
+   TYPE GUARDS
    ========================================================== */
 
 function isRecord(
@@ -110,6 +175,17 @@ function isNonEmptyString(
   );
 }
 
+/* ==========================================================
+   CUSTOMER VALIDATION
+
+   Only customer role is permitted.
+
+   If anyone changes the browser's sessionStorage
+   role to admin, this parser will reject the session.
+
+   This does not replace server authorization.
+   ========================================================== */
+
 function isValidCustomer(
   value: unknown
 ): value is Customer {
@@ -121,6 +197,9 @@ function isValidCustomer(
     isNonEmptyString(value.id) &&
     isNonEmptyString(value.name) &&
     isNonEmptyString(value.email) &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      value.email
+    ) &&
     value.role === "customer" &&
     (
       value.phone === undefined ||
@@ -128,6 +207,48 @@ function isValidCustomer(
     )
   );
 }
+
+/* ==========================================================
+   SESSION EXPIRATION
+
+   Existing LoginModal creates loginAt when signing in.
+
+   Older demo sessions without loginAt are invalidated
+   and the user can sign in again.
+
+   ========================================================== */
+
+function isSessionExpired(
+  loginAt: unknown
+): boolean {
+  if (
+    typeof loginAt !== "string" ||
+    !loginAt.trim()
+  ) {
+    return true;
+  }
+
+  const loginTime =
+    Date.parse(loginAt);
+
+  if (!Number.isFinite(loginTime)) {
+    return true;
+  }
+
+  const elapsed =
+    Date.now() - loginTime;
+
+  if (elapsed < 0) {
+    return true;
+  }
+
+  return elapsed >=
+    DEMO_SESSION_DURATION_MS;
+}
+
+/* ==========================================================
+   PARSE CUSTOMER SESSION
+   ========================================================== */
 
 function parseSession(
   raw: string | null
@@ -137,7 +258,8 @@ function parseSession(
   }
 
   try {
-    const parsed: unknown = JSON.parse(raw);
+    const parsed: unknown =
+      JSON.parse(raw);
 
     if (!isRecord(parsed)) {
       return null;
@@ -150,27 +272,60 @@ function parseSession(
       return null;
     }
 
-    const session: CustomerSession = {
-      isAuthenticated: true,
-      user: {
-        id: parsed.user.id,
-        name: parsed.user.name,
-        email: parsed.user.email,
-        role: "customer",
-        phone: parsed.user.phone ?? "",
-      },
+    /* ================================================
+       DO NOT ACCEPT ADMIN ROLE
+       ================================================ */
+
+    if (
+      parsed.user.role !== "customer"
+    ) {
+      return null;
+    }
+
+    /* ================================================
+       CHECK SESSION AGE
+       ================================================ */
+
+    if (
+      isSessionExpired(parsed.loginAt)
+    ) {
+      return null;
+    }
+
+    /* ================================================
+       SANITIZE CUSTOMER DATA
+       ================================================ */
+
+    const customer: Customer = {
+      id: parsed.user.id.trim(),
+      name: parsed.user.name.trim(),
+      email: parsed.user.email
+        .trim()
+        .toLowerCase(),
+      role: "customer",
+      phone:
+        typeof parsed.user.phone === "string"
+          ? parsed.user.phone
+          : "",
     };
 
-    if (typeof parsed.provider === "string") {
-      session.provider = parsed.provider;
+    const session: CustomerSession = {
+      isAuthenticated: true,
+      user: customer,
+      loginAt: parsed.loginAt as string,
+    };
+
+    if (
+      typeof parsed.provider === "string"
+    ) {
+      session.provider =
+        parsed.provider;
     }
 
-    if (typeof parsed.mode === "string") {
+    if (
+      typeof parsed.mode === "string"
+    ) {
       session.mode = parsed.mode;
-    }
-
-    if (typeof parsed.loginAt === "string") {
-      session.loginAt = parsed.loginAt;
     }
 
     return session;
@@ -182,10 +337,10 @@ function parseSession(
 /* ==========================================================
    REACT EXTERNAL STORE
 
-   useSyncExternalStore requires getSnapshot()
-   to return a stable value when storage has not changed.
+   Important:
+   useSyncExternalStore snapshots must remain stable.
 
-   Returning the original storage string satisfies this.
+   We use the raw sessionStorage string.
    ========================================================== */
 
 function subscribe(
@@ -195,25 +350,35 @@ function subscribe(
     return () => {};
   }
 
+  const handleChange = () => {
+    callback();
+  };
+
   window.addEventListener(
     CUSTOMER_SESSION_EVENT,
-    callback
+    handleChange
   );
 
   window.addEventListener(
     "storage",
-    callback
+    handleChange
   );
+
+  /*
+   * Browser sessionStorage is tab-scoped.
+   * The storage event is retained for compatibility
+   * with related same-origin contexts.
+   */
 
   return () => {
     window.removeEventListener(
       CUSTOMER_SESSION_EVENT,
-      callback
+      handleChange
     );
 
     window.removeEventListener(
       "storage",
-      callback
+      handleChange
     );
   };
 }
@@ -239,12 +404,12 @@ function getServerSnapshot(): null {
 }
 
 /* ==========================================================
-   NOTIFY AUTHENTICATION CHANGES
+   NOTIFY CUSTOMER SESSION CHANGED
 
-   Existing LoginModal and RegisterModal already call:
+   KEEP THIS FUNCTION NAME.
+
+   Existing components call:
    notifyCustomerSessionChanged()
-
-   Keep the function name unchanged.
    ========================================================== */
 
 export function notifyCustomerSessionChanged(): void {
@@ -253,32 +418,37 @@ export function notifyCustomerSessionChanged(): void {
   }
 
   window.dispatchEvent(
-    new Event(CUSTOMER_SESSION_EVENT)
+    new Event(
+      CUSTOMER_SESSION_EVENT
+    )
   );
 }
 
 /* ==========================================================
-   READ CURRENT CUSTOMER SESSION
+   CURRENT SESSION
    ========================================================== */
 
 export function getCustomerSession():
   CustomerSession | null {
-  return parseSession(getSnapshot());
+  return parseSession(
+    getSnapshot()
+  );
 }
 
 /* ==========================================================
-   READ CURRENT CUSTOMER
+   CURRENT CUSTOMER
    ========================================================== */
 
 export function getCurrentCustomer():
   Customer | null {
-  const session = getCustomerSession();
+  const session =
+    getCustomerSession();
 
   return session?.user ?? null;
 }
 
 /* ==========================================================
-   CHECK LOGIN STATUS
+   IS CUSTOMER LOGGED IN?
    ========================================================== */
 
 export function isCustomerLoggedIn(): boolean {
@@ -286,12 +456,12 @@ export function isCustomerLoggedIn(): boolean {
 }
 
 /* ==========================================================
-   SAVE CUSTOMER SESSION
+   SAVE DEMO CUSTOMER SESSION
 
-   Can be used later to simplify LoginModal and
-   RegisterModal so session-saving logic is centralized.
+   Centralized helper for future LoginModal and
+   RegisterModal improvements.
 
-   Existing modal implementations remain compatible.
+   This function NEVER creates an admin session.
    ========================================================== */
 
 export function saveCustomerSession(
@@ -311,15 +481,19 @@ export function saveCustomerSession(
   const sanitizedCustomer: Customer = {
     id: customer.id.trim(),
     name: customer.name.trim(),
-    email: customer.email.trim().toLowerCase(),
+    email: customer.email
+      .trim()
+      .toLowerCase(),
     role: "customer",
-    phone: customer.phone?.trim() ?? "",
+    phone:
+      customer.phone?.trim() ?? "",
   };
 
   const session: CustomerSession = {
     user: sanitizedCustomer,
     isAuthenticated: true,
-    loginAt: new Date().toISOString(),
+    loginAt:
+      new Date().toISOString(),
     provider,
     mode: "demo",
   };
@@ -327,12 +501,16 @@ export function saveCustomerSession(
   try {
     storage.setItem(
       CUSTOMER_USER_KEY,
-      JSON.stringify(sanitizedCustomer)
+      JSON.stringify(
+        sanitizedCustomer
+      )
     );
 
     storage.setItem(
       CUSTOMER_SESSION_KEY,
-      JSON.stringify(session)
+      JSON.stringify(
+        session
+      )
     );
 
     notifyCustomerSessionChanged();
@@ -340,7 +518,7 @@ export function saveCustomerSession(
     return true;
   } catch (error) {
     console.error(
-      "VizhaTickets session save error:",
+      "VizhaTickets customer session save error:",
       error
     );
 
@@ -349,17 +527,14 @@ export function saveCustomerSession(
 }
 
 /* ==========================================================
-   UPDATE CUSTOMER PROFILE
+   PROFILE UPDATE
 
-   For the upcoming Customer Dashboard.
+   Supported fields:
+   - Customer name
+   - International phone number
 
-   Editable fields:
-   - name
-   - phone
+   Email cannot be edited here.
 
-   Email is intentionally not editable here.
-   Email changes will require verification when
-   a real authentication backend is added.
    ========================================================== */
 
 export function updateCustomerProfile(
@@ -381,33 +556,53 @@ export function updateCustomerProfile(
   const currentCustomer =
     existingSession.user;
 
+  /* ================================================
+     VALIDATE NAME
+     ================================================ */
+
   const nextName =
     updates.name !== undefined
       ? updates.name.trim()
       : currentCustomer.name;
+
+  if (nextName.length < 2) {
+    return false;
+  }
+
+  /* ================================================
+     VALIDATE PHONE
+     ================================================ */
 
   const nextPhone =
     updates.phone !== undefined
       ? updates.phone.trim()
       : currentCustomer.phone ?? "";
 
-  if (nextName.length < 2) {
-    return false;
-  }
-
   if (nextPhone) {
     const digits =
-      nextPhone.replace(/[\s()+-]/g, "");
+      nextPhone.replace(
+        /[\s()+-]/g,
+        ""
+      );
 
-    if (!/^\d{7,15}$/.test(digits)) {
+    if (
+      !/^\d{7,15}$/.test(
+        digits
+      )
+    ) {
       return false;
     }
   }
+
+  /* ================================================
+     UPDATE CUSTOMER
+     ================================================ */
 
   const updatedCustomer: Customer = {
     ...currentCustomer,
     name: nextName,
     phone: nextPhone,
+    role: "customer",
   };
 
   const updatedSession: CustomerSession = {
@@ -418,12 +613,16 @@ export function updateCustomerProfile(
   try {
     storage.setItem(
       CUSTOMER_USER_KEY,
-      JSON.stringify(updatedCustomer)
+      JSON.stringify(
+        updatedCustomer
+      )
     );
 
     storage.setItem(
       CUSTOMER_SESSION_KEY,
-      JSON.stringify(updatedSession)
+      JSON.stringify(
+        updatedSession
+      )
     );
 
     notifyCustomerSessionChanged();
@@ -440,67 +639,226 @@ export function updateCustomerProfile(
 }
 
 /* ==========================================================
+   CLEAR DEMO CUSTOMER SESSION
+
+   Only removes VizhaTickets customer demo keys.
+   Other application session data remains untouched.
+   ========================================================== */
+
+function clearDemoCustomerSession(): void {
+  const storage = getStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(
+      CUSTOMER_SESSION_KEY
+    );
+
+    storage.removeItem(
+      CUSTOMER_USER_KEY
+    );
+  } catch {
+    // Browser storage might be unavailable.
+  }
+}
+
+/* ==========================================================
    CUSTOMER LOGOUT
 
-   Preserve unrelated sessionStorage keys.
-   Only remove VizhaTickets customer auth records.
+   Existing CustomerMenu calls:
+   logoutCustomer()
+
+   This function does not terminate a future
+   server-side administrator session.
+
+   That will require a separate authenticated
+   backend logout endpoint.
    ========================================================== */
 
 export function logoutCustomer(): void {
-  const storage = getStorage();
-
-  if (storage) {
-    try {
-      storage.removeItem(
-        CUSTOMER_SESSION_KEY
-      );
-
-      storage.removeItem(
-        CUSTOMER_USER_KEY
-      );
-    } catch (error) {
-      console.error(
-        "VizhaTickets logout error:",
-        error
-      );
-    }
-  }
+  clearDemoCustomerSession();
 
   notifyCustomerSessionChanged();
 }
 
 /* ==========================================================
-   CUSTOMER SESSION HOOK
+   FUTURE VERIFIED AUTHENTICATION
 
-   Existing components use:
+   This function checks the backend's authenticated
+   session rather than trusting sessionStorage.
 
-   const { customer, isAuthenticated } =
-     useCustomerSession();
+   Expected backend endpoint:
+   GET /api/auth/me
 
-   The API remains unchanged.
+   Example response:
 
-   Also exposes:
-   - session
-   - provider
-   - loginAt
+   {
+     "authenticated": true,
+     "user": {
+       "id": "123",
+       "name": "Staff",
+       "email": "staff@example.com",
+       "role": "admin"
+     }
+   }
+
+   The endpoint MUST validate an HTTP-only session
+   cookie and retrieve role permissions server-side.
+
+   This frontend function cannot authenticate users
+   or authorize dashboard API access by itself.
+
+   ========================================================== */
+
+export async function getVerifiedAccount():
+  Promise<VerifiedAccount | null> {
+  try {
+    const response = await fetch(
+      "/api/auth/me",
+      {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data: unknown =
+      await response.json();
+
+    if (!isRecord(data)) {
+      return null;
+    }
+
+    if (
+      data.authenticated !== true ||
+      !isRecord(data.user)
+    ) {
+      return null;
+    }
+
+    const user = data.user;
+
+    if (
+      !isNonEmptyString(user.id) ||
+      !isNonEmptyString(user.name) ||
+      !isNonEmptyString(user.email) ||
+      !isNonEmptyString(user.role)
+    ) {
+      return null;
+    }
+
+    const allowedRoles: AccountRole[] = [
+      "customer",
+      "admin",
+      "super_admin",
+      "event_manager",
+      "booking_manager",
+      "finance_manager",
+    ];
+
+    if (
+      !allowedRoles.includes(
+        user.role as AccountRole
+      )
+    ) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role as AccountRole,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ==========================================================
+   ADMIN ROLE HELPERS
+
+   These helpers classify a role that was returned
+   by the authenticated backend.
+
+   They DO NOT independently verify authentication.
+   ========================================================== */
+
+export function isAdminRole(
+  role: string | null | undefined
+): boolean {
+  return (
+    role === "admin" ||
+    role === "super_admin"
+  );
+}
+
+export function isStaffRole(
+  role: string | null | undefined
+): boolean {
+  return (
+    isAdminRole(role) ||
+    role === "event_manager" ||
+    role === "booking_manager" ||
+    role === "finance_manager"
+  );
+}
+
+/* ==========================================================
+   REACT CUSTOMER SESSION HOOK
+
+   Preserves the existing public API.
+
+   Example:
+
+   const {
+     customer,
+     isAuthenticated,
+     session,
+     provider,
+     loginAt,
+   } = useCustomerSession();
+
+   NOTE:
+   This reads DEMO customer authentication only.
+
+   Administrator authentication must use the
+   verified backend session.
+
    ========================================================== */
 
 export function useCustomerSession() {
-  const raw = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot
-  );
+  const raw =
+    useSyncExternalStore(
+      subscribe,
+      getSnapshot,
+      getServerSnapshot
+    );
 
-  const session = parseSession(raw);
+  const session =
+    parseSession(raw);
 
-  const customer = session?.user ?? null;
+  const customer =
+    session?.user ?? null;
 
   return {
     customer,
-    isAuthenticated: customer !== null,
+    isAuthenticated:
+      customer !== null,
     session,
-    provider: session?.provider ?? null,
-    loginAt: session?.loginAt ?? null,
+    provider:
+      session?.provider ?? null,
+    loginAt:
+      session?.loginAt ?? null,
   };
 }

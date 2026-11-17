@@ -5,8 +5,14 @@ import {
   type ReactNode,
 } from "react";
 
-import { Link } from "react-router-dom";
-import { isValidPhoneNumber } from "react-phone-number-input";
+import {
+  Link,
+  useLocation,
+} from "react-router-dom";
+
+import {
+  isValidPhoneNumber,
+} from "react-phone-number-input";
 
 import {
   ArrowLeft,
@@ -28,33 +34,63 @@ import {
   Sparkles,
   Ticket,
   UsersRound,
+  type LucideIcon,
 } from "lucide-react";
 
 import Header from "../components/header/Header";
 import Footer from "../components/footer/Footer";
 
-/* =========================================================
-   VIZHATICKETS — ORGANIZER & CONTACT REQUEST
+/* ==========================================================
+   VIZHATICKETS — CONTACT & ORGANIZER REQUEST PAGE
 
-   Compact BookMyShow-style form, redesigned for
-   VizhaTickets' premium cream-and-gold theme.
+   React + Vite + TypeScript
 
-   - Enquiry category selector
-   - Conditional event organizer fields
-   - International phone validation
-   - Company / individual support
-   - Event details and ticket inventory
-   - Ticketing and venue layout requirements
-   - Optional social/website link
-   - Consent and validation
-   - API submission with real response handling
+   UPDATED FEATURES
+   ----------------------------------------------------------
+   1. Existing premium design preserved
+   2. Contact and organizer enquiry forms preserved
+   3. Conditional event fields preserved
+   4. International phone validation preserved
+   5. Company / individual organizer selection
+   6. Event details and ticket requirements
+   7. International country and city support
+   8. Consent and honeypot validation
+   9. Frontend-only submission integration
+   10. Admin Requests inbox integration
+   11. Unique request reference generation
+   12. LocalStorage persistence
+   13. Same-browser storage synchronization
+   14. Complete event information stored for review
+   15. Production submissions disabled without backend
 
-   API:
-   /api/organizer-requests — event hosting enquiries
-   /api/contact-enquiries   — general enquiries
+   IMPORTANT
+   ----------------------------------------------------------
+   This is a FRONTEND DEVELOPMENT implementation.
 
-   These API endpoints must exist on the backend.
-   ========================================================= */
+   During development, requests are stored locally
+   in the same browser used by the Admin Dashboard.
+
+   Real customer submissions across devices require
+   backend endpoints and a database.
+
+   ========================================================== */
+
+/* ==========================================================
+   SHARED ADMIN REQUEST STORAGE
+
+   This must match the AdminApp.tsx request storage key.
+
+   ========================================================== */
+
+const ADMIN_REQUESTS_KEY =
+  "vizha_admin_requests_v1";
+
+const ADMIN_DATA_CHANGED_EVENT =
+  "vizha-admin-data-changed";
+
+/* ==========================================================
+   TYPES
+   ========================================================== */
 
 type EnquiryType =
   | "host-event"
@@ -74,7 +110,18 @@ type VenueLayout =
   | "reserved"
   | "stadium";
 
-type FormValues = {
+type RequestType =
+  | "Contact"
+  | "Organizer";
+
+type RequestStatus =
+  | "New"
+  | "In Review"
+  | "Approved"
+  | "Rejected"
+  | "Resolved";
+
+interface FormValues {
   enquiryType: EnquiryType;
 
   organizerType: OrganizerType;
@@ -107,16 +154,38 @@ type FormValues = {
 
   consent: boolean;
 
-  // Spam honeypot.
+  /* Anti-spam honeypot */
   website: string;
-};
+}
 
-type ApiResponse = {
-  success?: boolean;
-  reference?: string;
-  message?: string;
-  error?: string;
-};
+/*
+ * Compatible with the AdminRequest interface
+ * inside src/admin/AdminApp.tsx.
+ *
+ * Detailed event information is stored in message
+ * because the current admin interface displays
+ * the complete message in its request-details modal.
+ */
+
+interface AdminRequest {
+  id: string;
+  type: RequestType;
+
+  name: string;
+  email: string;
+  phone: string;
+
+  subject: string;
+  message: string;
+  country: string;
+
+  status: RequestStatus;
+  createdAt: string;
+}
+
+/* ==========================================================
+   FORM DEFAULTS
+   ========================================================== */
 
 const INITIAL_FORM: FormValues = {
   enquiryType: "host-event",
@@ -153,6 +222,10 @@ const INITIAL_FORM: FormValues = {
   website: "",
 };
 
+/* ==========================================================
+   ENQUIRY OPTIONS
+   ========================================================== */
+
 const ENQUIRY_TYPES: {
   value: EnquiryType;
   label: string;
@@ -179,6 +252,10 @@ const ENQUIRY_TYPES: {
   },
 ];
 
+/* ==========================================================
+   EVENT GENRES
+   ========================================================== */
+
 const EVENT_GENRES = [
   "Music / Concert",
   "Cultural",
@@ -191,6 +268,10 @@ const EVENT_GENRES = [
   "Corporate Event",
   "Other",
 ];
+
+/* ==========================================================
+   VENUE LAYOUT OPTIONS
+   ========================================================== */
 
 const LAYOUTS: {
   value: VenueLayout;
@@ -218,15 +299,34 @@ const LAYOUTS: {
   },
 ];
 
+/* ==========================================================
+   STYLING
+   ========================================================== */
+
 const INPUT_CLASS =
-  "mt-2 h-12 w-full rounded-xl border border-[#e9dfd2] " +
-  "bg-[#fffdfa] px-4 text-[13px] text-[#30251b] " +
-  "outline-none transition focus:border-[#c9790b] " +
-  "focus:bg-white focus:ring-4 focus:ring-[#c9790b]/10 " +
-  "placeholder:text-[#a29484] disabled:opacity-60";
+  "mt-2 h-12 w-full rounded-xl border " +
+  "border-[#e9dfd2] bg-[#fffdfa] " +
+  "px-4 text-[13px] text-[#30251b] " +
+  "outline-none transition-all duration-300 " +
+  "focus:border-[#c9790b] focus:bg-white " +
+  "focus:ring-4 focus:ring-[#c9790b]/10 " +
+  "hover:border-[#dcba8a] " +
+  "placeholder:text-[#a29484] " +
+  "disabled:cursor-not-allowed disabled:opacity-60";
 
 const LABEL_CLASS =
   "block text-[12px] font-bold text-[#403024]";
+
+const CARD_CLASS =
+  "rounded-[22px] border border-[#e9dece] " +
+  "bg-white p-5 shadow-sm " +
+  "transition-shadow duration-300 " +
+  "hover:shadow-[0_12px_35px_rgba(125,79,20,0.06)] " +
+  "sm:p-7";
+
+/* ==========================================================
+   REUSABLE FORM FIELD
+   ========================================================== */
 
 function FormField({
   label,
@@ -241,14 +341,15 @@ function FormField({
 }) {
   return (
     <div className="min-w-0">
-      <label className={LABEL_CLASS}>
+      <div className={LABEL_CLASS}>
         {label}
+
         {required && (
           <span className="ml-1 text-[#de760b]">
             *
           </span>
         )}
-      </label>
+      </div>
 
       {children}
 
@@ -261,6 +362,10 @@ function FormField({
   );
 }
 
+/* ==========================================================
+   SECTION TITLE
+   ========================================================== */
+
 function SectionTitle({
   number,
   icon: Icon,
@@ -268,22 +373,44 @@ function SectionTitle({
   description,
 }: {
   number: string;
-  icon: typeof CalendarDays;
+  icon: LucideIcon;
   title: string;
   description?: string;
 }) {
   return (
-    <div className="mb-5 flex items-start gap-3 border-b border-[#f0e7dc] pb-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fff0d9] text-[#c9790b]">
+    <div
+      className="
+        mb-5 flex items-start gap-3
+        border-b border-[#f0e7dc] pb-4
+      "
+    >
+      <div
+        className="
+          flex h-10 w-10 shrink-0
+          items-center justify-center
+          rounded-xl bg-[#fff0d9]
+          text-[#c9790b]
+        "
+      >
         <Icon size={19} />
       </div>
 
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#b97b25]">
+        <p
+          className="
+            text-[10px] font-bold uppercase
+            tracking-widest text-[#b97b25]
+          "
+        >
           Section {number}
         </p>
 
-        <h2 className="mt-0.5 text-[16px] font-bold text-[#281e16]">
+        <h2
+          className="
+            mt-0.5 text-[16px]
+            font-bold text-[#281e16]
+          "
+        >
           {title}
         </h2>
 
@@ -297,14 +424,345 @@ function SectionTitle({
   );
 }
 
+/* ==========================================================
+   STORAGE HELPERS
+
+   These functions do not contact a server.
+
+   ========================================================== */
+
+function generateRequestId(): string {
+  const timestamp = Date.now().toString(36).toUpperCase();
+
+  const random = crypto
+    .randomUUID()
+    .slice(0, 8)
+    .toUpperCase();
+
+  return `REQ-${timestamp}-${random}`;
+}
+
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
+}
+
+/*
+ * Validate the required request shape before
+ * writing into the shared admin storage.
+ */
+
+function isAdminRequest(
+  value: unknown
+): value is AdminRequest {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    (value.type === "Contact" ||
+      value.type === "Organizer") &&
+    typeof value.name === "string" &&
+    typeof value.email === "string" &&
+    typeof value.phone === "string" &&
+    typeof value.subject === "string" &&
+    typeof value.message === "string" &&
+    typeof value.country === "string" &&
+    typeof value.status === "string" &&
+    typeof value.createdAt === "string"
+  );
+}
+
+function readAdminRequests(): AdminRequest[] {
+  try {
+    const raw = window.localStorage.getItem(
+      ADMIN_REQUESTS_KEY
+    );
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed: unknown = JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      throw new Error(
+        "The existing request storage is invalid."
+      );
+    }
+
+    if (!parsed.every(isAdminRequest)) {
+      throw new Error(
+        "The existing request storage contains invalid records."
+      );
+    }
+
+    return parsed;
+  } catch (error) {
+    /*
+     * Never silently overwrite corrupted or
+     * unreadable request storage.
+     */
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Unable to read existing requests."
+    );
+  }
+}
+
+/* ==========================================================
+   FRONTEND REQUEST SAVE
+
+   IMPORTANT:
+   - Development mode only
+   - No real backend submission
+   - Same-browser storage only
+   - Keeps existing requests
+   - Preserves admin status changes
+
+   ========================================================== */
+
+function saveRequestToAdminPreview(
+  request: AdminRequest
+): void {
+  if (!import.meta.env.DEV) {
+    throw new Error(
+      "Online enquiry submission is not available yet."
+    );
+  }
+
+  const existing = readAdminRequests();
+
+  if (existing.some((item) => item.id === request.id)) {
+    throw new Error(
+      "Duplicate request reference. Please try again."
+    );
+  }
+
+  const next = [
+    request,
+    ...existing,
+  ];
+
+  try {
+    window.localStorage.setItem(
+      ADMIN_REQUESTS_KEY,
+      JSON.stringify(next)
+    );
+
+    /*
+     * Notify the admin dashboard if it is mounted
+     * inside the same browser document.
+     *
+     * Other tabs also receive normal storage events.
+     */
+    window.dispatchEvent(
+      new Event(ADMIN_DATA_CHANGED_EVENT)
+    );
+  } catch {
+    throw new Error(
+      "Unable to save your test request. Please check browser storage."
+    );
+  }
+}
+
+/* ==========================================================
+   LABEL HELPERS
+   ========================================================== */
+
+function enquiryLabel(type: EnquiryType): string {
+  return (
+    ENQUIRY_TYPES.find(
+      (item) => item.value === type
+    )?.label ?? "General Enquiry"
+  );
+}
+
+function venueLayoutLabel(
+  layout: VenueLayout
+): string {
+  return (
+    LAYOUTS.find(
+      (item) => item.value === layout
+    )?.label ?? "Not Decided Yet"
+  );
+}
+
+function optional(
+  value: string
+): string {
+  return value.trim() || "Not provided";
+}
+
+/* ==========================================================
+   BUILD COMPLETE ADMIN REQUEST
+
+   All submitted event fields are preserved in the
+   message so the existing AdminApp request-detail
+   modal can display them without needing changes.
+
+   ========================================================== */
+
+function buildAdminRequest(
+  form: FormValues
+): AdminRequest {
+  const isEvent =
+    form.enquiryType === "host-event";
+
+  const type: RequestType =
+    isEvent ? "Organizer" : "Contact";
+
+  const subject = isEvent
+    ? form.eventName.trim()
+    : enquiryLabel(form.enquiryType);
+
+  const details: string[] = [];
+
+  if (isEvent) {
+    details.push(
+      "EVENT ORGANIZER SUBMISSION",
+      "",
+      "ORGANIZER INFORMATION",
+      "---------------------",
+      `Organizer Type: ${
+        form.organizerType === "company"
+          ? "Company / Organization"
+          : "Individual"
+      }`,
+      `Organizer Name: ${form.organizerName.trim()}`,
+      `Company / Organization: ${
+        form.organizerType === "company"
+          ? optional(form.companyName)
+          : "Not applicable"
+      }`,
+      `Email: ${form.email.trim().toLowerCase()}`,
+      `Phone: ${form.phone.trim()}`,
+      `Organizer Country: ${form.organizerCountry.trim()}`,
+      "",
+      "EVENT INFORMATION",
+      "-----------------",
+      `Event Name: ${form.eventName.trim()}`,
+      `Event Genre: ${form.eventGenre}`,
+      `Event Country: ${form.eventCountry.trim()}`,
+      `Event City: ${form.eventCity.trim()}`,
+      `Venue: ${optional(form.venueName)}`,
+      `Proposed Date: ${
+        form.eventDate || "Not confirmed"
+      }`,
+      `Proposed Time: ${
+        form.eventTime || "Not confirmed"
+      }`,
+      "",
+      "TICKETING REQUIREMENTS",
+      "----------------------",
+      `Estimated Inventory: ${
+        optional(form.ticketInventory)
+      }`,
+      `Ticket Price Range: ${
+        optional(form.ticketPriceRange)
+      }`,
+      `Ticket Categories: ${
+        optional(form.ticketCategories)
+      }`,
+      `Venue / Seat Layout: ${
+        venueLayoutLabel(form.venueLayout)
+      }`,
+      "",
+      "EVENT DESCRIPTION",
+      "-----------------",
+      form.eventDescription.trim(),
+      "",
+      "ADDITIONAL INFORMATION",
+      "----------------------",
+      `Website / Social: ${
+        optional(form.websiteOrSocial)
+      }`,
+      `Remarks: ${optional(form.remarks)}`,
+      "",
+      "Contact Consent: Accepted"
+    );
+  } else {
+    details.push(
+      "GENERAL CONTACT ENQUIRY",
+      "",
+      `Enquiry Category: ${
+        enquiryLabel(form.enquiryType)
+      }`,
+      `Full Name: ${form.organizerName.trim()}`,
+      `Email: ${form.email.trim().toLowerCase()}`,
+      `Phone: ${form.phone.trim()}`,
+      `Country: ${form.organizerCountry.trim()}`,
+      "",
+      "MESSAGE",
+      "-------",
+      form.remarks.trim(),
+      "",
+      "Contact Consent: Accepted"
+    );
+  }
+
+  return {
+    id: generateRequestId(),
+
+    type,
+
+    name:
+      isEvent &&
+      form.organizerType === "company" &&
+      form.companyName.trim()
+        ? form.companyName.trim()
+        : form.organizerName.trim(),
+
+    email: form.email
+      .trim()
+      .toLowerCase(),
+
+    phone: form.phone.trim(),
+
+    subject,
+
+    message: details.join("\n"),
+
+    country: form.organizerCountry.trim(),
+
+    status: "New",
+
+    createdAt: new Date().toISOString(),
+  };
+}
+
+/* ==========================================================
+   MAIN PAGE
+   ========================================================== */
+
 export default function OrganizerRequestPage() {
- const [form, setForm] = useState<FormValues>(() => ({
-  ...INITIAL_FORM,
-  enquiryType:
-    window.location.pathname === "/organizer-request"
+  const location = useLocation();
+
+  /*
+   * /organizer-request:
+   *   Event-hosting form by default.
+   *
+   * /contact:
+   *   General contact form by default.
+   */
+
+  const initialEnquiryType: EnquiryType =
+    location.pathname === "/organizer-request"
       ? "host-event"
-      : "other",
-}));
+      : "other";
+
+  const [form, setForm] =
+    useState<FormValues>(() => ({
+      ...INITIAL_FORM,
+      enquiryType: initialEnquiryType,
+    }));
 
   const [submitting, setSubmitting] =
     useState(false);
@@ -321,6 +779,10 @@ export default function OrganizerRequestPage() {
   const isEventRequest =
     form.enquiryType === "host-event";
 
+  /* ========================================================
+     FORM UPDATE
+     ======================================================== */
+
   const update = <K extends keyof FormValues>(
     key: K,
     value: FormValues[K]
@@ -333,15 +795,20 @@ export default function OrganizerRequestPage() {
     setError("");
   };
 
-  const today = new Date();
-  const todayLocal =
-    `${today.getFullYear()}-` +
-    `${String(today.getMonth() + 1).padStart(2, "0")}-` +
-    `${String(today.getDate()).padStart(2, "0")}`;
+  /* ========================================================
+     TODAY — LOCAL DATE
+     ======================================================== */
 
-  /* =======================================================
+  const now = new Date();
+
+  const todayLocal =
+    `${now.getFullYear()}-` +
+    `${String(now.getMonth() + 1).padStart(2, "0")}-` +
+    `${String(now.getDate()).padStart(2, "0")}`;
+
+  /* ========================================================
      VALIDATION
-     ======================================================= */
+     ======================================================== */
 
   const validate = (): string => {
     if (form.organizerName.trim().length < 2) {
@@ -353,7 +820,7 @@ export default function OrganizerRequestPage() {
       form.organizerType === "company" &&
       form.companyName.trim().length < 2
     ) {
-      return "Please enter your organization name.";
+      return "Please enter your company or organization name.";
     }
 
     if (
@@ -366,10 +833,12 @@ export default function OrganizerRequestPage() {
 
     if (
       !form.phone.trim() ||
-      !isValidPhoneNumber(form.phone.trim())
+      !isValidPhoneNumber(
+        form.phone.trim()
+      )
     ) {
       return (
-        "Please enter a valid international phone " +
+        "Please enter a valid international mobile " +
         "number including the country code."
       );
     }
@@ -384,7 +853,7 @@ export default function OrganizerRequestPage() {
       }
 
       if (!form.eventGenre) {
-        return "Please select the event genre.";
+        return "Please select an event genre.";
       }
 
       if (!form.eventCountry.trim()) {
@@ -396,15 +865,32 @@ export default function OrganizerRequestPage() {
       }
 
       if (
-        form.ticketInventory &&
-        (
-          !Number.isInteger(
-            Number(form.ticketInventory)
-          ) ||
-          Number(form.ticketInventory) < 1
+        form.eventDate &&
+        form.eventDate < todayLocal
+      ) {
+        return "The proposed event date cannot be in the past.";
+      }
+
+      if (form.ticketInventory) {
+        const inventory = Number(
+          form.ticketInventory
+        );
+
+        if (
+          !Number.isInteger(inventory) ||
+          inventory < 1
+        ) {
+          return "Please enter a valid ticket quantity.";
+        }
+      }
+
+      if (
+        form.websiteOrSocial.trim() &&
+        !/^https?:\/\/\S+\.\S+/i.test(
+          form.websiteOrSocial.trim()
         )
       ) {
-        return "Please enter a valid ticket quantity.";
+        return "Please enter a valid website or social media URL.";
       }
 
       if (
@@ -415,13 +901,13 @@ export default function OrganizerRequestPage() {
           "20 characters."
         );
       }
-    } else if (
-      form.remarks.trim().length < 10
-    ) {
-      return (
-        "Please enter a message with at least " +
-        "10 characters."
-      );
+    } else {
+      if (form.remarks.trim().length < 10) {
+        return (
+          "Please enter an enquiry message with at " +
+          "least 10 characters."
+        );
+      }
     }
 
     if (!form.consent) {
@@ -431,21 +917,35 @@ export default function OrganizerRequestPage() {
     return "";
   };
 
-  /* =======================================================
+  /* ========================================================
      SUBMISSION
-     ======================================================= */
+
+     Development:
+       Save to local admin Requests inbox.
+
+     Production:
+       Do not claim a request was submitted when
+       no real backend exists.
+
+     ======================================================== */
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
 
-    if (submitting || submitted) return;
+    if (submitting || submitted) {
+      return;
+    }
 
     setError("");
 
+    /* Honeypot spam check */
+
     if (form.website.trim()) {
-      setError("Unable to submit this request.");
+      setError(
+        "Unable to submit this request."
+      );
       return;
     }
 
@@ -456,182 +956,201 @@ export default function OrganizerRequestPage() {
       return;
     }
 
+    /*
+     * Real submissions cannot be accepted until
+     * the future backend is connected.
+     */
+
+    if (!import.meta.env.DEV) {
+      setError(
+        "Online enquiry submission is not available yet. " +
+        "Please contact the VizhaTickets team through " +
+        "an alternative contact channel."
+      );
+      return;
+    }
+
     setSubmitting(true);
 
-    const endpoint = isEventRequest
-      ? "/api/organizer-requests"
-      : "/api/contact-enquiries";
-
-    const base = {
-      organizerName: form.organizerName.trim(),
-      email: form.email.trim().toLowerCase(),
-      phone: form.phone.trim(),
-      contactCountry: form.organizerCountry.trim(),
-      acceptedConsent: form.consent,
-    };
-
-    const payload = isEventRequest
-      ? {
-          ...base,
-
-          organizerType: form.organizerType,
-          companyName:
-            form.organizerType === "company"
-              ? form.companyName.trim()
-              : null,
-
-          eventName: form.eventName.trim(),
-          eventCategory: form.eventGenre,
-
-          proposedDate: form.eventDate || null,
-          proposedTime: form.eventTime || null,
-
-          eventCountry: form.eventCountry.trim(),
-          eventCity: form.eventCity.trim(),
-          venueName:
-            form.venueName.trim() || null,
-
-          expectedAttendance: form.ticketInventory
-            ? Number(form.ticketInventory)
-            : null,
-
-          ticketPriceRange:
-            form.ticketPriceRange.trim() || null,
-
-          ticketCategories:
-            form.ticketCategories.trim() || null,
-
-          venueLayout: form.venueLayout,
-
-          eventDescription:
-            form.eventDescription.trim(),
-
-          additionalRequirements:
-            [
-              form.websiteOrSocial.trim()
-                ? `Website / Social: ${form.websiteOrSocial.trim()}`
-                : "",
-              form.remarks.trim(),
-            ]
-              .filter(Boolean)
-              .join("\n") || null,
-
-          website: "",
-        }
-      : {
-          ...base,
-          enquiryType: form.enquiryType,
-          message: form.remarks.trim(),
-          website: "",
-        };
-
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const request = buildAdminRequest(form);
 
-      const contentType =
-        response.headers.get("content-type") ?? "";
+      saveRequestToAdminPreview(request);
 
-      if (!contentType.includes("application/json")) {
-        throw new Error(
-          "The submission service is not available yet. " +
-          "Please contact the VizhaTickets team."
-        );
-      }
-
-      const result =
-        (await response.json()) as ApiResponse;
-
-      if (!response.ok || result.success !== true) {
-        throw new Error(
-          result.error ||
-            result.message ||
-            "Unable to submit your enquiry."
-        );
-      }
-
-      setReference(
-        typeof result.reference === "string"
-          ? result.reference
-          : null
-      );
-
+      setReference(request.id);
       setSubmitted(true);
 
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
-    } catch (err) {
+    } catch (submitError) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to submit your request. Please try again."
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to save this request. Please try again."
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  /* =======================================================
-     SUCCESS VIEW
-     ======================================================= */
+  /* ========================================================
+     RESET FORM
+     ======================================================== */
+
+  const resetForm = () => {
+    setForm({
+      ...INITIAL_FORM,
+      enquiryType: initialEnquiryType,
+    });
+
+    setError("");
+    setSubmitted(false);
+    setReference(null);
+  };
+
+  /* ========================================================
+     SUCCESS PAGE
+     ======================================================== */
 
   if (submitted) {
     return (
       <div className="flex min-h-screen flex-col bg-[#fffaf2]">
         <Header />
 
-        <main className="flex flex-1 items-center justify-center px-4 py-16">
-          <div className="w-full max-w-147.5 rounded-[25px] border border-[#e9ddce] bg-white p-8 text-center shadow-sm sm:p-12">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#e8f8ed] text-[#278f49]">
+        <main
+          className="
+            flex flex-1 items-center
+            justify-center px-4 py-16
+          "
+        >
+          <div
+            className="
+              w-full max-w-147.5
+              rounded-[25px]
+              border border-[#e9ddce]
+              bg-white p-8 text-center
+              shadow-[0_15px_45px_rgba(105,68,23,0.07)]
+              sm:p-12
+            "
+          >
+            <div
+              className="
+                mx-auto flex h-20 w-20
+                items-center justify-center
+                rounded-full bg-[#e8f8ed]
+                text-[#278f49]
+              "
+            >
               <CheckCircle2 size={42} />
             </div>
 
-            <h1 className="mt-6 font-serif text-[30px] font-bold">
-              Request Received
+            <p
+              className="
+                mt-5 text-[10px] font-bold
+                uppercase tracking-[0.2em]
+                text-[#b97b25]
+              "
+            >
+              VizhaTickets Preview
+            </p>
+
+            <h1
+              className="
+                mt-3 font-serif
+                text-[30px] font-bold
+                text-[#251d15]
+              "
+            >
+              Request Saved Successfully
             </h1>
 
-            <p className="mt-4 text-[13px] leading-[1.9] text-[#857667]">
-              Your enquiry has been accepted by
-              our submission service. Our team
-              can now review your request.
+            <p
+              className="
+                mt-4 text-[13px]
+                leading-[1.9] text-[#857667]
+              "
+            >
+              Your request has been saved in this
+              browser's local development inbox.
+              You can review it in the
+              VizhaTickets Admin Dashboard under
+              the Requests section.
             </p>
 
             {reference && (
-              <div className="mt-6 rounded-xl bg-[#fff4e4] p-4">
-                <p className="text-[10px] font-bold uppercase text-[#9b7649]">
+              <div
+                className="
+                  mt-6 rounded-xl
+                  border border-[#f0dfc4]
+                  bg-[#fff4e4] p-4
+                "
+              >
+                <p
+                  className="
+                    text-[10px] font-bold
+                    uppercase tracking-wider
+                    text-[#9b7649]
+                  "
+                >
                   Request Reference
                 </p>
 
-                <p className="mt-2 break-all font-mono text-[15px] font-bold text-[#b87516]">
+                <p
+                  className="
+                    mt-2 break-all font-mono
+                    text-[14px] font-bold
+                    text-[#b87516]
+                  "
+                >
                   {reference}
                 </p>
               </div>
             )}
 
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <p
+              className="
+                mt-5 text-[11px]
+                leading-relaxed text-[#a08b76]
+              "
+            >
+              This is a frontend demonstration.
+              The request has not been sent to
+              a live server or to the VizhaTickets team.
+            </p>
+
+            <div
+              className="
+                mt-8 flex flex-wrap
+                justify-center gap-3
+              "
+            >
               <Link
                 to="/"
-                className="rounded-full bg-[#e88d0b] px-6 py-3 text-[12px] font-bold text-white"
+                className="
+                  inline-flex items-center
+                  justify-center rounded-full
+                  bg-[#e88d0b] px-6 py-3
+                  text-[12px] font-bold
+                  text-white transition
+                  hover:bg-[#c9790b]
+                  hover:-translate-y-0.5
+                "
               >
                 Return Home
               </Link>
 
               <button
                 type="button"
-                onClick={() => {
-                  setSubmitted(false);
-                  setReference(null);
-                  setForm({ ...INITIAL_FORM });
-                }}
-                className="rounded-full border border-[#e5d6c3] px-6 py-3 text-[12px] font-bold"
+                onClick={resetForm}
+                className="
+                  rounded-full border
+                  border-[#e5d6c3]
+                  px-6 py-3 text-[12px]
+                  font-bold transition
+                  hover:bg-[#fff3df]
+                "
               >
                 New Enquiry
               </button>
@@ -644,28 +1163,41 @@ export default function OrganizerRequestPage() {
     );
   }
 
-  /* =======================================================
+  /* ========================================================
      MAIN PAGE
-     ======================================================= */
+     ======================================================== */
 
   return (
     <div className="min-h-screen bg-[#fffaf2] text-[#211b15]">
       <Header />
 
       <main>
-        {/* BREADCRUMB */}
+        {/* ==================================================
+            BREADCRUMB
+            ================================================== */}
 
         <div className="border-b border-[#eee5da] bg-white">
-          <div className="vizha-container flex min-h-13.75 items-center gap-2 text-[12px]">
+          <div
+            className="
+              vizha-container flex min-h-13.75
+              items-center gap-2 text-[12px]
+            "
+          >
             <Link
               to="/"
-              className="inline-flex items-center gap-2 text-[#a86b15]"
+              className="
+                inline-flex items-center gap-2
+                text-[#a86b15] transition
+                hover:text-[#df8709]
+              "
             >
               <ArrowLeft size={15} />
               Home
             </Link>
 
-            <span className="text-[#aa9985]">/</span>
+            <span className="text-[#aa9985]">
+              /
+            </span>
 
             <span className="font-semibold">
               Contact & Event Requests
@@ -673,40 +1205,97 @@ export default function OrganizerRequestPage() {
           </div>
         </div>
 
-        {/* HEADER */}
+        {/* ==================================================
+            HERO
+            ================================================== */}
 
-        <section className="relative overflow-hidden bg-[#17120d]">
+        <section
+          className="
+            relative overflow-hidden
+            bg-[#17120d]
+          "
+        >
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-cover bg-center opacity-25"
+            className="
+              absolute inset-0
+              bg-cover bg-center opacity-25
+            "
             style={{
               backgroundImage:
                 "url('/images/about/organizer-banner.png')",
             }}
           />
 
-          <div className="absolute inset-0 bg-linear-to-r from-[#17120d] via-[#17120d]/90 to-[#17120d]/65" />
+          <div
+            className="
+              absolute inset-0
+              bg-linear-to-r
+              from-[#17120d]
+              via-[#17120d]/90
+              to-[#17120d]/65
+            "
+          />
 
-          <div className="vizha-container relative z-10 py-10 sm:py-12">
-            <div className="flex max-w-200 items-start gap-4">
-              <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#9c711f]/50 bg-[#d98914]/15 text-[#ffaf2e] sm:flex">
+          <div
+            className="
+              vizha-container relative z-10
+              py-10 sm:py-12
+            "
+          >
+            <div
+              className="
+                flex max-w-200
+                items-start gap-4
+              "
+            >
+              <div
+                className="
+                  hidden h-14 w-14
+                  shrink-0 items-center
+                  justify-center rounded-2xl
+                  border border-[#9c711f]/50
+                  bg-[#d98914]/15
+                  text-[#ffaf2e] sm:flex
+                "
+              >
                 <MessageSquare size={28} />
               </div>
 
               <div>
-                <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#ffae2a]">
+                <p
+                  className="
+                    flex items-center gap-2
+                    text-[11px] font-bold
+                    uppercase tracking-[0.14em]
+                    text-[#ffae2a]
+                  "
+                >
                   <Sparkles size={15} />
                   Contact VizhaTickets
                 </p>
 
-                <h1 className="mt-3 font-serif text-[clamp(2rem,4vw,3rem)] font-bold leading-[1.2] text-white">
-                  Let's Make Your Event
+                <h1
+                  className="
+                    mt-3 font-serif
+                    text-[clamp(2rem,4vw,3rem)]
+                    font-bold leading-[1.2]
+                    text-white
+                  "
+                >
+                  Let's Make Your Event{" "}
                   <span className="text-[#ffad2c]">
-                    {" "}Happen.
+                    Happen.
                   </span>
                 </h1>
 
-                <p className="mt-3 max-w-170 text-[13px] leading-[1.8] text-white/75">
+                <p
+                  className="
+                    mt-3 max-w-170
+                    text-[13px]
+                    leading-[1.8] text-white/75
+                  "
+                >
                   Whether you're hosting an event,
                   exploring a partnership, or need
                   assistance, send us your enquiry
@@ -717,33 +1306,62 @@ export default function OrganizerRequestPage() {
           </div>
         </section>
 
-        {/* MAIN CONTENT */}
+        {/* ==================================================
+            MAIN FORM SECTION
+            ================================================== */}
 
         <section className="py-10 sm:py-14">
           <div className="vizha-container">
-            <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_330px]">
-              {/* FORM */}
+            <div
+              className="
+                grid items-start gap-7
+                lg:grid-cols-[minmax(0,1fr)_300px]
+                xl:grid-cols-[minmax(0,1fr)_330px]
+              "
+            >
+              {/* ============================================
+                  FORM
+                  ============================================ */}
 
               <form
                 onSubmit={handleSubmit}
                 noValidate
                 className="min-w-0 space-y-5"
               >
-                {/* ENQUIRY TYPE */}
+                {/* ==========================================
+                    ENQUIRY TYPE
+                    ========================================== */}
 
-                <section className="rounded-[22px] border border-[#e9dece] bg-white p-5 shadow-sm sm:p-7">
+                <section className={CARD_CLASS}>
                   <div className="mb-5">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#b77b27]">
+                    <p
+                      className="
+                        text-[11px] font-bold
+                        uppercase tracking-wider
+                        text-[#b77b27]
+                      "
+                    >
                       How Can We Help?
                     </p>
 
-                    <h2 className="mt-2 text-[20px] font-bold">
+                    <h2
+                      className="
+                        mt-2 text-[20px]
+                        font-bold
+                      "
+                    >
                       Submit Your Enquiry
                     </h2>
 
-                    <p className="mt-2 text-[12px] text-[#89786a]">
-                      Select the type of enquiry to
-                      display the relevant form.
+                    <p
+                      className="
+                        mt-2 text-[12px]
+                        text-[#89786a]
+                      "
+                    >
+                      Select your enquiry type.
+                      The relevant fields will
+                      appear automatically.
                     </p>
                   </div>
 
@@ -775,15 +1393,21 @@ export default function OrganizerRequestPage() {
 
                       <ChevronDown
                         size={18}
-                        className="pointer-events-none absolute right-4 top-6 text-[#aa782d]"
+                        className="
+                          pointer-events-none
+                          absolute right-4 top-6
+                          text-[#aa782d]
+                        "
                       />
                     </div>
                   </FormField>
                 </section>
 
-                {/* ORGANIZER / CONTACT DETAILS */}
+                {/* ==========================================
+                    CONTACT / ORGANIZER INFORMATION
+                    ========================================== */}
 
-                <section className="rounded-[22px] border border-[#e9dece] bg-white p-5 shadow-sm sm:p-7">
+                <section className={CARD_CLASS}>
                   <SectionTitle
                     number="01"
                     icon={Building2}
@@ -797,15 +1421,25 @@ export default function OrganizerRequestPage() {
 
                   {isEventRequest && (
                     <div className="mb-5">
-                      <label className={LABEL_CLASS}>
+                      <div className={LABEL_CLASS}>
                         Organizer Type
-                      </label>
+                      </div>
 
-                      <div className="mt-3 flex flex-wrap gap-3">
+                      <div
+                        className="
+                          mt-3 flex flex-wrap gap-3
+                        "
+                      >
                         {(
                           [
-                            ["individual", "Individual"],
-                            ["company", "Company / Organization"],
+                            [
+                              "individual",
+                              "Individual",
+                            ],
+                            [
+                              "company",
+                              "Company / Organization",
+                            ],
                           ] as const
                         ).map(([value, label]) => (
                           <button
@@ -813,16 +1447,26 @@ export default function OrganizerRequestPage() {
                             type="button"
                             disabled={submitting}
                             onClick={() =>
-                              update("organizerType", value)
+                              update(
+                                "organizerType",
+                                value
+                              )
                             }
                             aria-pressed={
                               form.organizerType === value
                             }
-                            className={`rounded-full border px-4 py-2.5 text-[12px] font-semibold transition ${
-                              form.organizerType === value
-                                ? "border-[#d18a1c] bg-[#fff0d9] text-[#ab6610]"
-                                : "border-[#e9ded0] bg-white text-[#756554] hover:border-[#e0b57b]"
-                            }`}
+                            className={`
+                              rounded-full border
+                              px-4 py-2.5
+                              text-[12px] font-semibold
+                              transition-all duration-300
+                              hover:-translate-y-0.5
+                              ${
+                                form.organizerType === value
+                                  ? "border-[#d18a1c] bg-[#fff0d9] text-[#ab6610]"
+                                  : "border-[#e9ded0] bg-white text-[#756554] hover:border-[#e0b57b]"
+                              }
+                            `}
                           >
                             {label}
                           </button>
@@ -831,7 +1475,11 @@ export default function OrganizerRequestPage() {
                     </div>
                   )}
 
-                  <div className="grid gap-5 sm:grid-cols-2">
+                  <div
+                    className="
+                      grid gap-5 sm:grid-cols-2
+                    "
+                  >
                     <FormField
                       label={
                         isEventRequest
@@ -889,7 +1537,10 @@ export default function OrganizerRequestPage() {
                         type="email"
                         value={form.email}
                         onChange={(event) =>
-                          update("email", event.target.value)
+                          update(
+                            "email",
+                            event.target.value
+                          )
                         }
                         placeholder="name@example.com"
                         autoComplete="email"
@@ -902,13 +1553,16 @@ export default function OrganizerRequestPage() {
                     <FormField
                       label="Mobile Number"
                       required
-                      hint="Include the international country code, e.g. +94 or +44."
+                      hint="Include international country code, such as +94, +44 or +41."
                     >
                       <input
                         type="tel"
                         value={form.phone}
                         onChange={(event) =>
-                          update("phone", event.target.value)
+                          update(
+                            "phone",
+                            event.target.value
+                          )
                         }
                         placeholder="+94 77 123 4567"
                         autoComplete="tel"
@@ -923,7 +1577,6 @@ export default function OrganizerRequestPage() {
                       required
                     >
                       <input
-                        type="text"
                         value={form.organizerCountry}
                         onChange={(event) =>
                           update(
@@ -931,6 +1584,7 @@ export default function OrganizerRequestPage() {
                             event.target.value
                           )
                         }
+                        type="text"
                         placeholder="Sri Lanka"
                         autoComplete="country-name"
                         maxLength={100}
@@ -941,11 +1595,13 @@ export default function OrganizerRequestPage() {
                   </div>
                 </section>
 
-                {/* EVENT INFORMATION */}
+                {/* ==========================================
+                    EVENT INFORMATION
+                    ========================================== */}
 
                 {isEventRequest && (
                   <>
-                    <section className="rounded-[22px] border border-[#e9dece] bg-white p-5 shadow-sm sm:p-7">
+                    <section className={CARD_CLASS}>
                       <SectionTitle
                         number="02"
                         icon={CalendarDays}
@@ -953,7 +1609,11 @@ export default function OrganizerRequestPage() {
                         description="The details of your planned event."
                       />
 
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div
+                        className="
+                          grid gap-5 sm:grid-cols-2
+                        "
+                      >
                         <FormField
                           label="Event Name"
                           required
@@ -1118,9 +1778,11 @@ export default function OrganizerRequestPage() {
                       </div>
                     </section>
 
-                    {/* TICKETING */}
+                    {/* ======================================
+                        TICKETING REQUIREMENTS
+                        ====================================== */}
 
-                    <section className="rounded-[22px] border border-[#e9dece] bg-white p-5 shadow-sm sm:p-7">
+                    <section className={CARD_CLASS}>
                       <SectionTitle
                         number="03"
                         icon={Ticket}
@@ -1128,10 +1790,14 @@ export default function OrganizerRequestPage() {
                         description="Approximate details are sufficient."
                       />
 
-                      <div className="grid gap-5 sm:grid-cols-2">
+                      <div
+                        className="
+                          grid gap-5 sm:grid-cols-2
+                        "
+                      >
                         <FormField
                           label="Inventory to Sell"
-                          hint="Estimated total number of tickets."
+                          hint="Estimated number of tickets."
                         >
                           <input
                             type="number"
@@ -1209,11 +1875,15 @@ export default function OrganizerRequestPage() {
                   </>
                 )}
 
-                {/* ADDITIONAL DETAILS */}
+                {/* ==========================================
+                    ADDITIONAL DETAILS / MESSAGE
+                    ========================================== */}
 
-                <section className="rounded-[22px] border border-[#e9dece] bg-white p-5 shadow-sm sm:p-7">
+                <section className={CARD_CLASS}>
                   <SectionTitle
-                    number={isEventRequest ? "04" : "02"}
+                    number={
+                      isEventRequest ? "04" : "02"
+                    }
                     icon={MessageSquare}
                     title={
                       isEventRequest
@@ -1276,9 +1946,19 @@ export default function OrganizerRequestPage() {
                     />
                   </FormField>
 
-                  {/* CONSENT */}
+                  {/* ======================================
+                      CONTACT CONSENT
+                      ====================================== */}
 
-                  <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-[#eadac4] bg-[#fff8ed] p-4">
+                  <label
+                    className="
+                      mt-6 flex cursor-pointer
+                      items-start gap-3
+                      rounded-xl border
+                      border-[#eadac4]
+                      bg-[#fff8ed] p-4
+                    "
+                  >
                     <input
                       type="checkbox"
                       checked={form.consent}
@@ -1289,23 +1969,36 @@ export default function OrganizerRequestPage() {
                         )
                       }
                       disabled={submitting}
-                      className="mt-1 h-4 w-4 shrink-0 accent-[#c9790b]"
+                      className="
+                        mt-1 h-4 w-4 shrink-0
+                        accent-[#c9790b]
+                      "
                     />
 
-                    <span className="text-[11px] leading-[1.8] text-[#6f5c48]">
-                      I confirm the information is
-                      accurate and agree to be contacted
-                      by VizhaTickets about this enquiry.
+                    <span
+                      className="
+                        text-[11px] leading-[1.8]
+                        text-[#6f5c48]
+                      "
+                    >
+                      I confirm the information is accurate
+                      and agree to be contacted by
+                      VizhaTickets about this enquiry.
                       <span className="ml-1 text-[#dc7009]">
                         *
                       </span>
                     </span>
                   </label>
 
-                  {/* HONEYPOT */}
+                  {/* ======================================
+                      HONEYPOT
+                      ====================================== */}
 
                   <div
-                    className="absolute left-[-9999px]"
+                    className="
+                      absolute left-[-9999px]
+                      h-px w-px overflow-hidden
+                    "
                     aria-hidden="true"
                   >
                     <label htmlFor="vizha-form-website">
@@ -1326,64 +2019,126 @@ export default function OrganizerRequestPage() {
                     />
                   </div>
 
-                  {/* ERROR */}
+                  {/* ======================================
+                      ERROR
+                      ====================================== */}
 
                   {error && (
                     <div
                       role="alert"
-                      className="mt-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-[12px] leading-relaxed text-red-700"
+                      className="
+                        mt-5 flex items-start gap-2
+                        rounded-xl border
+                        border-red-200 bg-red-50
+                        p-4 text-[12px]
+                        leading-relaxed text-red-700
+                      "
                     >
                       <Info
                         size={17}
                         className="mt-0.5 shrink-0"
                       />
-                      {error}
+                      <span>{error}</span>
                     </div>
                   )}
 
-                  {/* SUBMIT */}
+                  {/* ======================================
+                      SUBMIT BUTTON
+                      ====================================== */}
 
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="mt-6 flex min-h-12.75 w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-[#f5a019] to-[#dc7905] px-6 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(201,121,11,0.18)] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="
+                      mt-6 flex min-h-12.75
+                      w-full items-center
+                      justify-center gap-2
+                      rounded-full
+                      bg-linear-to-r
+                      from-[#f5a019]
+                      to-[#dc7905]
+                      px-6 text-[13px]
+                      font-bold text-white
+                      shadow-[0_8px_20px_rgba(201,121,11,0.18)]
+                      transition-all duration-300
+                      hover:-translate-y-0.5
+                      hover:shadow-[0_12px_26px_rgba(201,121,11,0.25)]
+                      disabled:cursor-not-allowed
+                      disabled:opacity-60
+                    "
                   >
                     {submitting ? (
                       <>
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        Submitting...
+                        <span
+                          className="
+                            h-4 w-4 animate-spin
+                            rounded-full border-2
+                            border-white/30 border-t-white
+                          "
+                        />
+                        Saving...
                       </>
                     ) : (
                       <>
                         <Send size={17} />
+
                         {isEventRequest
                           ? "Submit Event Request"
                           : "Send Enquiry"}
+
                         <ArrowRight size={17} />
                       </>
                     )}
                   </button>
 
-                  <p className="mt-3 text-center text-[10px] leading-relaxed text-[#94816d]">
-                    No request is considered submitted
-                    until our server confirms receipt.
+                  <p
+                    className="
+                      mt-3 text-center
+                      text-[10px] leading-relaxed
+                      text-[#94816d]
+                    "
+                  >
+                    {import.meta.env.DEV
+                      ? "Frontend preview: submissions are stored locally in this browser for admin testing."
+                      : "Live enquiry submission will be enabled when our submission service is connected."}
                   </p>
                 </section>
               </form>
 
-              {/* INFORMATION SIDEBAR */}
+              {/* ============================================
+                  INFORMATION SIDEBAR
+                  ============================================ */}
 
               <aside className="space-y-5 lg:sticky lg:top-27.5">
-                <div className="overflow-hidden rounded-[22px] border border-[#e8dcc9] bg-white">
+                {/* HOW IT WORKS */}
+
+                <div
+                  className="
+                    overflow-hidden rounded-[22px]
+                    border border-[#e8dcc9]
+                    bg-white
+                  "
+                >
                   <div className="bg-[#17120d] p-5 text-white">
-                    <div className="flex items-center gap-2 text-[#ffb02a]">
+                    <div
+                      className="
+                        flex items-center gap-2
+                        text-[#ffb02a]
+                      "
+                    >
                       <ClipboardList size={20} />
+
                       <h2 className="text-[15px] font-bold text-white">
                         How It Works
                       </h2>
                     </div>
 
-                    <p className="mt-2 text-[11px] leading-relaxed text-white/70">
+                    <p
+                      className="
+                        mt-2 text-[11px]
+                        leading-relaxed text-white/70
+                      "
+                    >
                       A straightforward way to connect
                       with the VizhaTickets team.
                     </p>
@@ -1394,81 +2149,148 @@ export default function OrganizerRequestPage() {
                       [
                         "01",
                         "Submit Your Enquiry",
-                        "Fill in the information and send your request.",
+                        "Complete and submit your details.",
                       ],
                       [
                         "02",
                         "Team Review",
-                        "Our team reviews the submitted details.",
+                        "The team reviews submitted information.",
                       ],
                       [
                         "03",
                         "Get in Touch",
-                        "We'll use your contact information to discuss the next steps.",
+                        "The team contacts you about the next steps.",
                       ],
-                    ].map(([number, title, description]) => (
-                      <div
-                        key={number}
-                        className="flex gap-3"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff0d8] text-[11px] font-bold text-[#b5751a]">
-                          {number}
-                        </span>
+                    ].map(
+                      ([number, title, description]) => (
+                        <div
+                          key={number}
+                          className="flex gap-3"
+                        >
+                          <span
+                            className="
+                              flex h-9 w-9 shrink-0
+                              items-center justify-center
+                              rounded-full
+                              bg-[#fff0d8]
+                              text-[11px] font-bold
+                              text-[#b5751a]
+                            "
+                          >
+                            {number}
+                          </span>
 
-                        <div>
-                          <p className="text-[12px] font-bold">
-                            {title}
-                          </p>
+                          <div>
+                            <p className="text-[12px] font-bold">
+                              {title}
+                            </p>
 
-                          <p className="mt-1 text-[11px] leading-[1.7] text-[#8a7868]">
-                            {description}
-                          </p>
+                            <p
+                              className="
+                                mt-1 text-[11px]
+                                leading-[1.7]
+                                text-[#8a7868]
+                              "
+                            >
+                              {description}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
                 </div>
 
-                <div className="rounded-[22px] border border-[#e7d3b4] bg-[#fff3df] p-5">
-                  <div className="flex items-center gap-2 text-[#a36e20]">
+                {/* WHY PARTNER */}
+
+                <div
+                  className="
+                    rounded-[22px]
+                    border border-[#e7d3b4]
+                    bg-[#fff3df] p-5
+                  "
+                >
+                  <div
+                    className="
+                      flex items-center gap-2
+                      text-[#a36e20]
+                    "
+                  >
                     <BadgeCheck size={20} />
+
                     <h2 className="text-[14px] font-bold">
                       Why Partner With Us?
                     </h2>
                   </div>
 
                   <div className="mt-4 space-y-3">
-                    <div className="flex items-start gap-2 text-[11px] leading-[1.7] text-[#806546]">
+                    <div
+                      className="
+                        flex items-start gap-2
+                        text-[11px] leading-[1.7]
+                        text-[#806546]
+                      "
+                    >
                       <Ticket
                         size={16}
-                        className="mt-0.5 shrink-0 text-[#bf7a15]"
+                        className="
+                          mt-0.5 shrink-0
+                          text-[#bf7a15]
+                        "
                       />
                       Flexible event ticket categories
                       and pricing.
                     </div>
 
-                    <div className="flex items-start gap-2 text-[11px] leading-[1.7] text-[#806546]">
+                    <div
+                      className="
+                        flex items-start gap-2
+                        text-[11px] leading-[1.7]
+                        text-[#806546]
+                      "
+                    >
                       <MapPin
                         size={16}
-                        className="mt-0.5 shrink-0 text-[#bf7a15]"
+                        className="
+                          mt-0.5 shrink-0
+                          text-[#bf7a15]
+                        "
                       />
                       Different seating, zone and
                       stadium layouts.
                     </div>
 
-                    <div className="flex items-start gap-2 text-[11px] leading-[1.7] text-[#806546]">
+                    <div
+                      className="
+                        flex items-start gap-2
+                        text-[11px] leading-[1.7]
+                        text-[#806546]
+                      "
+                    >
                       <Globe2
                         size={16}
-                        className="mt-0.5 shrink-0 text-[#bf7a15]"
+                        className="
+                          mt-0.5 shrink-0
+                          text-[#bf7a15]
+                        "
                       />
                       Local and international
                       organizer enquiries.
                     </div>
 
-                    <div className="flex items-start gap-2 text-[11px] leading-[1.7] text-[#806546]">
+                    <div
+                      className="
+                        flex items-start gap-2
+                        text-[11px] leading-[1.7]
+                        text-[#806546]
+                      "
+                    >
                       <ShieldCheck
                         size={16}
-                        className="mt-0.5 shrink-0 text-[#bf7a15]"
+                        className="
+                          mt-0.5 shrink-0
+                          text-[#bf7a15]
+                        "
                       />
                       Review and approval before
                       event publication.
@@ -1476,7 +2298,15 @@ export default function OrganizerRequestPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[22px] border border-[#e8dcc9] bg-white p-5">
+                {/* HELP */}
+
+                <div
+                  className="
+                    rounded-[22px]
+                    border border-[#e8dcc9]
+                    bg-white p-5
+                  "
+                >
                   <div className="flex items-center gap-2">
                     <Headphones
                       size={19}
@@ -1488,32 +2318,61 @@ export default function OrganizerRequestPage() {
                     </h2>
                   </div>
 
-                  <p className="mt-3 text-[11px] leading-[1.8] text-[#887867]">
-                    For general questions, use the
-                    enquiry dropdown or visit our
-                    contact page.
+                  <p
+                    className="
+                      mt-3 text-[11px]
+                      leading-[1.8] text-[#887867]
+                    "
+                  >
+                    For general questions, select
+                    a contact enquiry type or visit
+                    our contact page.
                   </p>
 
                   <Link
                     to="/contact"
-                    className="mt-4 inline-flex items-center gap-2 text-[12px] font-bold text-[#b77518]"
+                    className="
+                      mt-4 inline-flex
+                      items-center gap-2
+                      text-[12px] font-bold
+                      text-[#b77518]
+                      transition hover:gap-3
+                    "
                   >
+                    <Mail size={15} />
                     Contact Us
                     <ArrowRight size={15} />
                   </Link>
                 </div>
 
-                <div className="rounded-xl border border-[#eadcc5] bg-white p-4">
+                {/* DISCLAIMER */}
+
+                <div
+                  className="
+                    rounded-xl border
+                    border-[#eadcc5]
+                    bg-white p-4
+                  "
+                >
                   <div className="flex items-start gap-2">
                     <UsersRound
                       size={17}
-                      className="mt-0.5 shrink-0 text-[#b67921]"
+                      className="
+                        mt-0.5 shrink-0
+                        text-[#b67921]
+                      "
                     />
 
-                    <p className="text-[10px] leading-[1.8] text-[#917c65]">
-                      Event submission is a request
-                      for review, not automatic approval
-                      or a confirmed ticketing agreement.
+                    <p
+                      className="
+                        text-[10px] leading-[1.8]
+                        text-[#917c65]
+                      "
+                    >
+                      Event submission is a request for
+                      review, not automatic approval,
+                      publication or a confirmed
+                      ticketing agreement.
                     </p>
                   </div>
                 </div>

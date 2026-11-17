@@ -1,0 +1,821 @@
+
+/* ==========================================================
+   VIZHATICKETS — ADVANCED EVENT FORM
+   Premium Cream / Gold / Charcoal Design
+   ========================================================== */
+
+.vef-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 16, 23, 0.72);
+  backdrop-filter: blur(7px);
+  animation: vef-fade 180ms ease both;
+}
+
+.vef-backdrop *,
+.vef-backdrop *::before,
+.vef-backdrop *::after {
+  box-sizing: border-box;
+}
+
+.vef-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 1020px);
+  max-height: min(94vh, 920px);
+  overflow: hidden;
+  border: 1px solid #eadbca;
+  border-radius: 22px;
+  background: #fffdfa;
+  color: #211d1b;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.3);
+  animation: vef-enter 250ms ease both;
+}
+
+.vef-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 24px 30px 20px;
+  border-bottom: 1px solid #eee4d8;
+  background:
+    radial-gradient(circle at 85% 0%, #fff0d8, transparent 35%),
+    #fffdfa;
+}
+
+.vef-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  color: #bd750f;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1.6px;
+}
+
+.vef-header h2 {
+  margin: 0;
+  color: #191a25;
+  font-size: clamp(23px, 3vw, 30px);
+  font-weight: 850;
+  letter-spacing: -0.8px;
+}
+
+.vef-header > div > p:last-child {
+  margin: 7px 0 0;
+  color: #928577;
+  font-size: 12px;
+}
+
+.vef-close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #ebdfd2;
+  border-radius: 12px;
+  background: white;
+  color: #716a65;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.vef-close:hover {
+  transform: rotate(90deg);
+  color: #bb710c;
+  border-color: #ddb17a;
+  background: #fff5e7;
+}
+
+/* ==========================================================
+   STEP NAVIGATION
+   ========================================================== */
+
+.vef-progress {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  padding: 16px 25px;
+  border-bottom: 1px solid #eee4d8;
+  background: white;
+}
+
+.vef-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #a0978d;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.vef-step > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #e8dfd5;
+  border-radius: 50%;
+  background: #f7f3ee;
+  color: #81776d;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.vef-step small {
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.vef-step:hover {
+  background: #fff6e9;
+  color: #b36e12;
+}
+
+.vef-step-active {
+  background: #fff1dc;
+  color: #ad6709;
+}
+
+.vef-step-active > span {
+  border-color: #d89433;
+  background: linear-gradient(135deg, #f3b34c, #bd6d08);
+  color: white;
+}
+
+.vef-step-complete > span {
+  border-color: #cfdfcd;
+  background: #e8f7e8;
+  color: #328a43;
+}
+
+/* ==========================================================
+   FORM BODY AND CONTENT
+   ========================================================== */
+
+.vef-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.vef-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 26px 30px 32px;
+  scrollbar-width: thin;
+  scrollbar-color: #dec5a4 transparent;
+  animation: vef-content 180ms ease both;
+}
+
+.vef-content-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.vef-content-heading h3 {
+  margin: 0;
+  color: #23212b;
+  font-size: 19px;
+  font-weight: 850;
+}
+
+.vef-content-heading p {
+  margin: 0;
+  color: #a48b69;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.vef-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 19px;
+}
+
+.vef-wide {
+  grid-column: 1 / -1;
+}
+
+.vef-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 8px;
+  color: #57483a;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.vef-field > span b {
+  color: #d47e07;
+}
+
+.vef-field input:not([type="file"]),
+.vef-field select,
+.vef-field textarea {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 13px;
+  border: 1px solid #e7d9c9;
+  border-radius: 10px;
+  outline: none;
+  background: white;
+  color: #24232e;
+  font: inherit;
+  font-weight: 500;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.vef-field textarea {
+  resize: vertical;
+  line-height: 1.65;
+}
+
+.vef-field input:focus,
+.vef-field select:focus,
+.vef-field textarea:focus {
+  border-color: #d28a23;
+  box-shadow: 0 0 0 3px rgba(210, 138, 35, 0.12);
+}
+
+.vef-field input::placeholder,
+.vef-field textarea::placeholder {
+  color: #b0a399;
+}
+
+/* ==========================================================
+   IMAGE UPLOADS
+   ========================================================== */
+
+.vef-upload {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 155px;
+  padding: 22px;
+  border: 2px dashed #e1bd8c;
+  border-radius: 14px;
+  background: #fff9f0;
+  color: #c47b14;
+  text-align: center;
+  cursor: pointer;
+  transition: all 220ms ease;
+}
+
+.vef-upload:hover,
+.vef-upload:focus-within {
+  border-color: #c77a0b;
+  background: #fff2df;
+  transform: translateY(-2px);
+}
+
+.vef-upload input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.vef-upload strong {
+  color: #765224;
+  font-size: 13px;
+}
+
+.vef-upload small {
+  color: #9d8669;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.vef-image-preview {
+  position: relative;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #eaded1;
+  border-radius: 13px;
+  background: #f4eee7;
+}
+
+.vef-image-preview img {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+}
+
+.vef-image-preview button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px;
+  padding: 9px 12px;
+  border: 1px solid #f0d5d5;
+  border-radius: 8px;
+  background: #fff2f2;
+  color: #bb4646;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.vef-map-preview img {
+  max-height: 360px;
+}
+
+/* ==========================================================
+   TICKET CATEGORIES
+   ========================================================== */
+
+.vef-tickets {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.vef-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.vef-section-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.vef-section-head p {
+  margin: 5px 0 0;
+  color: #8d8175;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.vef-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border: 1px solid #dab077;
+  border-radius: 10px;
+  background: #fff3e1;
+  color: #ae6709;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.vef-add-btn:hover {
+  background: #ffe8c3;
+  transform: translateY(-2px);
+}
+
+.vef-tier {
+  padding: 20px;
+  border: 1px solid #e8d9c7;
+  border-radius: 15px;
+  background: white;
+  box-shadow: 0 5px 15px rgba(88, 54, 15, 0.035);
+}
+
+.vef-tier-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.vef-tier-head strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #a66b20;
+  font-size: 12px;
+}
+
+.vef-remove {
+  display: grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  border: 1px solid #f0d8d8;
+  border-radius: 9px;
+  background: #fff5f5;
+  color: #bc5050;
+  cursor: pointer;
+}
+
+.vef-remove:hover {
+  background: #ffe5e5;
+}
+
+.vef-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  color: #665649;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vef-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #cc7c0d;
+}
+
+.vef-total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 19px;
+  border: 1px solid #f0d7ae;
+  border-radius: 13px;
+  background: #fff4e3;
+}
+
+.vef-total > div {
+  flex: 1;
+  min-width: 150px;
+}
+
+.vef-total span,
+.vef-total strong {
+  display: block;
+}
+
+.vef-total span {
+  color: #8b7155;
+  font-size: 11px;
+}
+
+.vef-total strong {
+  margin-top: 6px;
+  color: #8b5109;
+  font-size: 19px;
+  font-weight: 850;
+}
+
+/* ==========================================================
+   INFORMATION / ERRORS
+   ========================================================== */
+
+.vef-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid #e7d8c1;
+  border-radius: 11px;
+  background: #fff7e9;
+  color: #b97819;
+}
+
+.vef-info svg {
+  flex-shrink: 0;
+}
+
+.vef-info p {
+  margin: 0;
+  color: #806c51;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.7;
+}
+
+.vef-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 19px;
+  padding: 13px 15px;
+  border: 1px solid #f0caca;
+  border-radius: 10px;
+  background: #fff0f0;
+  color: #b63e3e;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.vef-error svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================================
+   REVIEW
+   ========================================================== */
+
+.vef-review-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: #29904b;
+}
+
+.vef-review-title h3 {
+  margin: 0;
+  color: #25232e;
+  font-size: 17px;
+}
+
+.vef-review-title p {
+  margin: 4px 0 0;
+  color: #91877c;
+  font-size: 11px;
+}
+
+.vef-review-banner {
+  display: block;
+  width: 100%;
+  max-height: 270px;
+  margin-bottom: 18px;
+  border-radius: 13px;
+  object-fit: cover;
+}
+
+.vef-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.vef-review-grid > div {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #eee2d5;
+  border-radius: 11px;
+  background: #fff9f0;
+}
+
+.vef-review-grid span,
+.vef-review-grid strong {
+  display: block;
+}
+
+.vef-review-grid span {
+  color: #967f67;
+  font-size: 10px;
+}
+
+.vef-review-grid strong {
+  margin-top: 6px;
+  color: #242432;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.vef-review-tiers,
+.vef-review-layout {
+  margin-top: 22px;
+}
+
+.vef-review-tiers h4,
+.vef-review-layout h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.vef-review-tiers > div {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee4d8;
+  font-size: 12px;
+}
+
+.vef-review-tiers strong {
+  color: #ad6b12;
+}
+
+.vef-review-layout img {
+  display: block;
+  max-width: 100%;
+  max-height: 350px;
+  border-radius: 11px;
+  object-fit: contain;
+}
+
+/* ==========================================================
+   FOOTER / BUTTONS
+   ========================================================== */
+
+.vef-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 13px;
+  padding: 18px 28px;
+  border-top: 1px solid #eee2d5;
+  background: #fffdfa;
+}
+
+.vef-footer-left,
+.vef-footer-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.vef-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 220ms ease;
+}
+
+.vef-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vef-btn-light {
+  border: 1px solid #e9dfd4;
+  background: white;
+  color: #70665c;
+}
+
+.vef-btn-outline {
+  border: 1px solid #dcb47f;
+  background: #fff7ec;
+  color: #b16d14;
+}
+
+.vef-btn-primary {
+  border: 1px solid #b66a08;
+  background: linear-gradient(120deg, #f0ae46, #bb6a05);
+  color: white;
+  box-shadow: 0 5px 14px rgba(172, 99, 11, 0.18);
+}
+
+.vef-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 19px rgba(125, 75, 16, 0.12);
+}
+
+.vef-btn-primary:not(:disabled):hover {
+  box-shadow: 0 10px 21px rgba(175, 98, 8, 0.26);
+}
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 700px) {
+  .vef-backdrop {
+    padding: 8px;
+  }
+
+  .vef-dialog {
+    max-height: 98dvh;
+    border-radius: 15px;
+  }
+
+  .vef-header {
+    padding: 17px;
+  }
+
+  .vef-progress {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px;
+  }
+
+  .vef-step {
+    flex: 0 0 96px;
+  }
+
+  .vef-body {
+    padding: 19px 16px;
+  }
+
+  .vef-grid,
+  .vef-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vef-wide {
+    grid-column: auto;
+  }
+
+  .vef-footer {
+    align-items: stretch;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .vef-footer-left {
+    flex-shrink: 0;
+  }
+
+  .vef-footer-right {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .vef-btn {
+    padding: 0 11px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .vef-footer {
+    flex-wrap: wrap;
+  }
+
+  .vef-footer-left,
+  .vef-footer-right {
+    width: 100%;
+  }
+
+  .vef-footer-right .vef-btn {
+    flex: 1;
+  }
+
+  .vef-tier {
+    padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vef-backdrop *,
+  .vef-backdrop,
+  .vef-dialog {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes vef-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes vef-enter {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes vef-content {
+  from {
+    opacity: 0.5;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
