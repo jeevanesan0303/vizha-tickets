@@ -2,6 +2,7 @@
 /* ==========================================================
    VIZHATICKETS — ADVANCED ORGANIZER FORM
    Premium Cream, Gold and Charcoal UI
+   Improved International Form & Dropdown Alignment
    ========================================================== */
 
 .vof-backdrop {
@@ -27,7 +28,7 @@
 .vof-dialog {
   display: flex;
   flex-direction: column;
-  width: min(100%, 1010px);
+  width: min(100%, 1080px);
   max-height: min(94dvh, 920px);
   min-height: 0;
   overflow: hidden;
@@ -38,6 +39,10 @@
   box-shadow: 0 32px 95px rgba(0, 0, 0, 0.3);
   animation: vof-enter 250ms ease both;
 }
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
 
 .vof-header {
   display: flex;
@@ -53,6 +58,11 @@
       transparent 40%
     ),
     #fffdfa;
+  flex-shrink: 0;
+}
+
+.vof-header > div {
+  min-width: 0;
 }
 
 .vof-eyebrow {
@@ -66,12 +76,17 @@
   letter-spacing: 1.6px;
 }
 
+.vof-eyebrow svg {
+  flex-shrink: 0;
+}
+
 .vof-header h2 {
   margin: 0;
   color: #1b1b27;
   font-size: clamp(23px, 3vw, 30px);
   font-weight: 850;
   letter-spacing: -0.9px;
+  line-height: 1.2;
 }
 
 .vof-header > div > p:last-child {
@@ -84,18 +99,15 @@
 .vof-close {
   display: grid;
   place-items: center;
-  width: 43px;
-  height: 43px;
+  width: 45px;
+  height: 45px;
   flex-shrink: 0;
   border: 1px solid #e9ddcf;
   border-radius: 12px;
   background: white;
   color: #716962;
   cursor: pointer;
-  transition:
-    transform 220ms ease,
-    background 220ms ease,
-    border-color 220ms ease;
+  transition: all 220ms ease;
 }
 
 .vof-close:hover {
@@ -103,6 +115,11 @@
   background: #fff2df;
   border-color: #dfad6b;
   color: #b56b08;
+}
+
+.vof-close:focus-visible {
+  outline: 3px solid rgba(209, 139, 39, 0.25);
+  outline-offset: 3px;
 }
 
 /* ==========================================================
@@ -116,31 +133,32 @@
   padding: 15px 25px;
   border-bottom: 1px solid #eee4da;
   background: white;
+  flex-shrink: 0;
 }
 
 .vof-step {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   min-width: 0;
+  min-height: 72px;
   padding: 9px 5px;
   border: 0;
   border-radius: 12px;
   background: transparent;
   color: #a49b91;
   cursor: pointer;
-  transition:
-    background 200ms ease,
-    color 200ms ease,
-    transform 200ms ease;
+  transition: all 200ms ease;
 }
 
 .vof-step > span {
   display: grid;
   place-items: center;
-  width: 33px;
-  height: 33px;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
   border: 1px solid #e6dbcf;
   border-radius: 50%;
   background: #f7f3ee;
@@ -179,7 +197,7 @@
 }
 
 /* ==========================================================
-   BODY
+   FORM BODY
    ========================================================== */
 
 .vof-form {
@@ -193,11 +211,25 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   padding: 26px 30px 33px;
   scrollbar-width: thin;
   scrollbar-color: #dfc6a5 transparent;
   animation: vof-content 180ms ease both;
+}
+
+.vof-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.vof-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vof-body::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: #dfc6a5;
 }
 
 .vof-content-heading {
@@ -220,17 +252,27 @@
   color: #9a856c;
   font-size: 11px;
   font-weight: 750;
+  white-space: nowrap;
 }
+
+/* ==========================================================
+   FORM GRID
+   ========================================================== */
 
 .vof-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 20px;
 }
 
 .vof-wide {
   grid-column: 1 / -1;
 }
+
+/* ==========================================================
+   FORM LABELS
+   ========================================================== */
 
 .vof-field {
   display: flex;
@@ -240,6 +282,11 @@
   color: #59483a;
   font-size: 12px;
   font-weight: 750;
+}
+
+.vof-field > span {
+  display: block;
+  line-height: 1.45;
 }
 
 .vof-field > span b {
@@ -253,20 +300,27 @@
   line-height: 1.6;
 }
 
+/* ==========================================================
+   INPUTS AND TEXTAREAS
+   ========================================================== */
+
 .vof-field input:not([type="file"]),
 .vof-field select,
 .vof-field textarea {
   display: block;
   width: 100%;
-  min-height: 45px;
-  padding: 11px 13px;
+  min-width: 0;
+  min-height: 47px;
+  padding: 11px 14px;
   border: 1px solid #e8dacb;
   border-radius: 10px;
   outline: none;
-  background: white;
+  background-color: white;
   color: #252431;
-  font: inherit;
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 500;
+  line-height: 1.5;
   transition:
     border-color 200ms ease,
     box-shadow 200ms ease,
@@ -274,6 +328,7 @@
 }
 
 .vof-field textarea {
+  min-height: 110px;
   resize: vertical;
   line-height: 1.7;
 }
@@ -281,6 +336,7 @@
 .vof-field input::placeholder,
 .vof-field textarea::placeholder {
   color: #afa49a;
+  opacity: 1;
 }
 
 .vof-field input:hover,
@@ -294,7 +350,187 @@
 .vof-field textarea:focus {
   border-color: #d18b27;
   box-shadow: 0 0 0 3px rgba(209, 139, 39, 0.12);
-  background: #fffefd;
+  background-color: #fffefd;
+}
+
+.vof-field input:disabled,
+.vof-field select:disabled,
+.vof-field textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f7f3ee;
+}
+
+/* ==========================================================
+   DROPDOWN ARROW ALIGNMENT
+   Custom arrow for all native select elements.
+
+   This fixes the inconsistent browser-default arrows.
+   ========================================================== */
+
+.vof-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  padding: 11px 43px 11px 14px;
+
+  background-color: #ffffff;
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23847768' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+
+  cursor: pointer;
+}
+
+.vof-field select:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c17b17' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.vof-field select option {
+  padding: 10px;
+  background: white;
+  color: #252431;
+}
+
+/* Remove browser number input spinner inconsistencies */
+
+.vof-field input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.vof-field input[type="number"]::-webkit-inner-spin-button,
+.vof-field input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+/* Date picker alignment */
+
+.vof-field input[type="date"] {
+  position: relative;
+  min-height: 47px;
+  cursor: pointer;
+}
+
+/* ==========================================================
+   INTERNATIONAL COUNTRY SELECTOR
+
+   These styles are ready for the country selector
+   added to the TSX component.
+   ========================================================== */
+
+.vof-country-select {
+  position: relative;
+  width: 100%;
+}
+
+.vof-country-select select {
+  width: 100%;
+  min-height: 47px;
+  padding: 11px 43px 11px 14px;
+  border: 1px solid #e8dacb;
+  border-radius: 10px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23847768' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  color: #252431;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ==========================================================
+   INTERNATIONAL PHONE NUMBER FIELD
+
+   Supports country dial-code selector + phone input.
+   ========================================================== */
+
+.vof-phone-group {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  min-height: 47px;
+  overflow: hidden;
+  border: 1px solid #e8dacb;
+  border-radius: 10px;
+  background: white;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.vof-phone-group:focus-within {
+  border-color: #d18b27;
+  box-shadow: 0 0 0 3px rgba(209, 139, 39, 0.12);
+}
+
+.vof-phone-country {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 0 115px;
+  min-width: 100px;
+  border-right: 1px solid #eee3d7;
+  background: #fffaf3;
+}
+
+.vof-phone-country select {
+  width: 100%;
+  height: 100%;
+  min-height: 45px;
+  padding: 0 28px 0 12px;
+  border: 0;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23847768' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 13px;
+  color: #59483a;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vof-phone-group input,
+.vof-phone-group input[type="tel"] {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 45px;
+  padding: 11px 13px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: #252431;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.vof-phone-group input:focus {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+.vof-phone-group input::placeholder {
+  color: #afa49a;
 }
 
 /* ==========================================================
@@ -303,7 +539,7 @@
 
 .vof-type-options {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -312,7 +548,7 @@
   align-items: center;
   justify-content: center;
   gap: 11px;
-  min-height: 55px;
+  min-height: 57px;
   padding: 12px 15px;
   border: 1px solid #e8dacb;
   border-radius: 12px;
@@ -322,6 +558,10 @@
   font-weight: 800;
   cursor: pointer;
   transition: all 220ms ease;
+}
+
+.vof-type svg {
+  flex-shrink: 0;
 }
 
 .vof-type:hover {
@@ -433,7 +673,9 @@
 .vof-logo-preview button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
+  min-height: 36px;
   padding: 9px 12px;
   border: 1px solid #f0d6d6;
   border-radius: 9px;
@@ -449,7 +691,7 @@
 }
 
 /* ==========================================================
-   INFORMATION & ERRORS
+   INFORMATION BOX
    ========================================================== */
 
 .vof-info {
@@ -465,6 +707,7 @@
 
 .vof-info > svg {
   flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .vof-info p {
@@ -474,6 +717,10 @@
   font-weight: 500;
   line-height: 1.8;
 }
+
+/* ==========================================================
+   ERROR MESSAGE
+   ========================================================== */
 
 .vof-error {
   display: flex;
@@ -492,10 +739,11 @@
 
 .vof-error > svg {
   flex-shrink: 0;
+  margin-top: 1px;
 }
 
 /* ==========================================================
-   REVIEW
+   REVIEW SECTION
    ========================================================== */
 
 .vof-review {
@@ -509,6 +757,10 @@
   align-items: center;
   gap: 12px;
   color: #2b934e;
+}
+
+.vof-review-head > svg {
+  flex-shrink: 0;
 }
 
 .vof-review-head h3 {
@@ -576,15 +828,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 28px;
+  padding: 17px 28px;
   border-top: 1px solid #eee2d5;
   background: #fffdfa;
+  flex-shrink: 0;
 }
 
 .vof-footer-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
+  min-width: 0;
 }
 
 .vof-btn {
@@ -592,9 +847,10 @@
   align-items: center;
   justify-content: center;
   gap: 9px;
-  min-height: 43px;
-  padding: 0 17px;
+  min-height: 45px;
+  padding: 0 18px;
   border-radius: 10px;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
@@ -602,9 +858,16 @@
   transition: all 220ms ease;
 }
 
+.vof-btn svg {
+  display: block;
+  flex-shrink: 0;
+}
+
 .vof-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .vof-btn-light {
@@ -613,10 +876,20 @@
   color: #75695d;
 }
 
+.vof-btn-light:hover {
+  background: #fff7ed;
+  border-color: #d9b789;
+}
+
 .vof-btn-outline {
   border: 1px solid #deb67f;
   background: #fff7ec;
   color: #aa6712;
+}
+
+.vof-btn-outline:hover {
+  background: #fff0da;
+  border-color: #ca872b;
 }
 
 .vof-btn-primary {
@@ -624,6 +897,10 @@
   background: linear-gradient(120deg, #eeac43, #bc6a07);
   color: white;
   box-shadow: 0 5px 14px rgba(177, 99, 12, 0.18);
+}
+
+.vof-btn-primary:hover {
+  background: linear-gradient(120deg, #f4b951, #a95d05);
 }
 
 .vof-btn:not(:disabled):hover {
@@ -636,7 +913,44 @@
 }
 
 /* ==========================================================
-   RESPONSIVE
+   ACCESSIBILITY
+   ========================================================== */
+
+.vof-backdrop button:focus-visible,
+.vof-backdrop input:focus-visible,
+.vof-backdrop select:focus-visible,
+.vof-backdrop textarea:focus-visible {
+  outline-color: rgba(209, 139, 39, 0.6);
+}
+
+/* ==========================================================
+   RESPONSIVE — TABLETS
+   ========================================================== */
+
+@media (max-width: 900px) {
+  .vof-dialog {
+    width: min(100%, 760px);
+  }
+
+  .vof-header {
+    padding: 22px;
+  }
+
+  .vof-body {
+    padding: 23px;
+  }
+
+  .vof-progress {
+    padding: 12px 16px;
+  }
+
+  .vof-step small {
+    font-size: 10px;
+  }
+}
+
+/* ==========================================================
+   RESPONSIVE — MOBILE
    ========================================================== */
 
 @media (max-width: 720px) {
@@ -645,32 +959,49 @@
   }
 
   .vof-dialog {
+    width: 100%;
     max-height: 98dvh;
     border-radius: 15px;
   }
 
   .vof-header {
-    padding: 18px;
+    padding: 17px;
+  }
+
+  .vof-header h2 {
+    font-size: 23px;
+  }
+
+  .vof-close {
+    width: 39px;
+    height: 39px;
   }
 
   .vof-progress {
     display: flex;
     gap: 6px;
-    padding: 11px;
+    padding: 10px;
     overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .vof-progress::-webkit-scrollbar {
+    display: none;
   }
 
   .vof-step {
-    flex: 0 0 115px;
+    flex: 0 0 105px;
+    min-height: 65px;
   }
 
   .vof-body {
-    padding: 19px 16px;
+    padding: 19px 16px 24px;
   }
 
   .vof-grid,
   .vof-review-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 17px;
   }
 
   .vof-wide {
@@ -682,12 +1013,38 @@
   }
 
   .vof-btn {
+    min-height: 42px;
     padding: 0 12px;
     font-size: 11px;
   }
 }
 
+/* ==========================================================
+   RESPONSIVE — SMALL MOBILE
+   ========================================================== */
+
 @media (max-width: 440px) {
+  .vof-header {
+    gap: 10px;
+  }
+
+  .vof-eyebrow {
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  .vof-header h2 {
+    font-size: 21px;
+  }
+
+  .vof-header > div > p:last-child {
+    font-size: 11px;
+  }
+
+  .vof-content-heading h3 {
+    font-size: 18px;
+  }
+
   .vof-footer {
     align-items: stretch;
     flex-wrap: wrap;
@@ -699,16 +1056,28 @@
 
   .vof-footer-actions {
     width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .vof-footer-actions .vof-btn {
-    flex: 1;
+    width: 100%;
+    min-width: 0;
+    padding: 0 8px;
   }
 
   .vof-type-options {
     grid-template-columns: 1fr;
   }
+
+  .vof-phone-country {
+    flex-basis: 100px;
+  }
 }
+
+/* ==========================================================
+   REDUCED MOTION
+   ========================================================== */
 
 @media (prefers-reduced-motion: reduce) {
   .vof-backdrop,

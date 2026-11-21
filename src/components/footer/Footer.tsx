@@ -1,10 +1,15 @@
 
-"use client";
+import {
+  motion,
+} from "framer-motion";
 
-import Image from "next/image";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import type {
+  ReactNode,
+} from "react";
+
+import {
+  Link,
+} from "react-router-dom";
 
 import {
   Mail,
@@ -19,28 +24,25 @@ import {
 /* ==========================================================
    VIZHATICKETS — FOOTER
 
-   React + Vite + TypeScript + Tailwind CSS
+   React + Vite + TypeScript + React Router + Tailwind CSS
 
-   UPDATED:
+   FEATURES:
    ----------------------------------------------------------
-   - Removed Create an Event
-   - Removed Organizer Login
-   - Added organizer Contact Us link
-   - Organizer link goes to /organizer-request
-   - Added organizer invitation description
-   - Preserved original footer design
-   - Preserved Tamil VizhaTickets logo
-   - Preserved social links
-   - Preserved app promotion
-   - Preserved festival background
-   - Preserved golden decorative waves
-   - Preserved footer animations
-   - Preserved responsive layout
+   - React Router navigation
+   - Premium black and gold footer
+   - Tamil VizhaTickets logo
+   - Social media links
+   - Organizer contact section
+   - Terms & Conditions
+   - Privacy Policy
+   - App promotion
+   - Festival background
+   - Golden decorative waves
+   - Footer animations
+   - Responsive layout
 
-   IMPORTANT:
-   The /organizer-request route must be created
-   separately in src/App.tsx.
    ========================================================== */
+
 
 /* ==========================================================
    SOCIAL ICON TYPES
@@ -51,6 +53,7 @@ type SocialIconProps = {
   strokeWidth?: number;
   className?: string;
 };
+
 
 /* ==========================================================
    INSTAGRAM ICON
@@ -98,6 +101,7 @@ function InstagramIcon({
   );
 }
 
+
 /* ==========================================================
    FACEBOOK ICON
    ========================================================== */
@@ -121,6 +125,7 @@ function FacebookIcon({
     </svg>
   );
 }
+
 
 /* ==========================================================
    YOUTUBE ICON
@@ -156,6 +161,7 @@ function YoutubeIcon({
   );
 }
 
+
 /* ==========================================================
    LINKEDIN ICON
    ========================================================== */
@@ -180,6 +186,7 @@ function LinkedinIcon({
   );
 }
 
+
 /* ==========================================================
    FOOTER NAVIGATION LINKS
    ========================================================== */
@@ -187,63 +194,58 @@ function LinkedinIcon({
 const exploreLinks = [
   {
     label: "Events",
-    href: "/events",
+    to: "/events",
   },
   {
     label: "Categories",
-    href: "/categories",
+    to: "/categories",
   },
   {
     label: "About Us",
-    href: "/about",
+    to: "/about",
   },
 ];
+
+
+/* ==========================================================
+   SUPPORT LINKS
+
+   All destinations must have corresponding routes.
+   ========================================================== */
 
 const supportLinks = [
   {
-    label: "Help Center",
-    href: "/help",
-  },
-  {
     label: "Contact Us",
-    href: "/contact",
+    to: "/contact",
   },
   {
     label: "Terms & Conditions",
-    href: "/terms",
+    to: "/terms",
   },
   {
     label: "Privacy Policy",
-    href: "/privacy",
+    to: "/privacy",
   },
 ];
 
+
 /* ==========================================================
-   ORGANIZER NAVIGATION — UPDATED
-
-   REMOVED:
-   - Create an Event
-   - Organizer Login
-
-   NEW:
-   - Contact Us -> /organizer-request
-
-   This route will contain an organizer proposal form.
+   ORGANIZER NAVIGATION
    ========================================================== */
 
 const organizerLinks = [
   {
     label: "Contact Us",
-    href: "/organizer-request",
+    to: "/organizer-request",
   },
 ];
+
 
 /* ==========================================================
    SOCIAL LINKS
 
-   Original destinations preserved.
-   Replace these homepage URLs with the official
-   VizhaTickets profiles when available.
+   Replace generic destinations with official
+   VizhaTickets social media profiles when available.
    ========================================================== */
 
 const socialLinks = [
@@ -257,17 +259,9 @@ const socialLinks = [
     href: "https://facebook.com/",
     Icon: FacebookIcon,
   },
-  {
-    label: "YouTube",
-    href: "https://youtube.com/",
-    Icon: YoutubeIcon,
-  },
-  {
-    label: "LinkedIn",
-    href: "https://linkedin.com/",
-    Icon: LinkedinIcon,
-  },
+
 ];
+
 
 /* ==========================================================
    FOOTER SECTION HEADING
@@ -291,6 +285,7 @@ function FooterHeading({
     </div>
   );
 }
+
 
 /* ==========================================================
    APP STORE BADGE
@@ -319,8 +314,6 @@ function StoreBadge({
     >
       {store === "apple" ? (
         <>
-          {/* APPLE LOGO */}
-
           <Apple
             size={25}
             fill="currentColor"
@@ -339,8 +332,6 @@ function StoreBadge({
         </>
       ) : (
         <>
-          {/* GOOGLE PLAY LOGO */}
-
           <svg
             aria-hidden="true"
             width="24"
@@ -384,28 +375,28 @@ function StoreBadge({
   );
 }
 
+
 /* ==========================================================
    ANIMATED FOOTER LINK
 
-   Original underline animation preserved.
-
+   IMPORTANT:
+   Uses React Router Link instead of Next.js Link.
    ========================================================== */
 
 interface FooterLinkProps {
-  href: string;
+  to: string;
   children: ReactNode;
   className?: string;
 }
 
 function FooterLink({
-  href,
+  to,
   children,
   className = "",
 }: FooterLinkProps) {
   return (
     <Link
-      href={href}
-      prefetch={true}
+      to={to}
       className={`group relative inline-flex items-center text-[13px] text-white/85 transition-colors duration-200 hover:text-[#ffb800] sm:text-sm ${className}`}
     >
       <span className="relative z-10">
@@ -428,6 +419,7 @@ function FooterLink({
     </Link>
   );
 }
+
 
 /* ==========================================================
    MAIN FOOTER COMPONENT
@@ -453,10 +445,9 @@ export default function Footer() {
       }}
       className="relative isolate w-full max-w-full overflow-hidden bg-[#080705] text-white"
     >
+
       {/* ====================================================
           FESTIVAL BACKGROUND
-
-          Original image preserved.
           ==================================================== */}
 
       <div
@@ -477,13 +468,15 @@ export default function Footer() {
         className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-[#080705]/95 via-[#080705]/85 to-[#080705]/55"
       />
 
+
       {/* ====================================================
-          MAIN FOOTER
+          MAIN FOOTER CONTENT
           ==================================================== */}
 
       <div className="mx-auto w-full max-w-[1800px] px-5 pb-20 pt-8 sm:px-8 sm:pb-24 sm:pt-10 lg:px-12 lg:pb-24 lg:pt-11">
 
         <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-[1.45fr_0.8fr_0.8fr_0.75fr_1.5fr] lg:gap-5 xl:gap-6">
+
 
           {/* ==================================================
               BRAND AND CONTACT
@@ -494,18 +487,20 @@ export default function Footer() {
             {/* BRAND LOGO */}
 
             <Link
-              href="/"
+              to="/"
               aria-label="VizhaTickets home"
               className="inline-flex items-center transition-transform hover:scale-[1.02]"
             >
-              <Image
+              <img
                 src="/images/branding/vizha-logo.png"
                 alt="VizhaTickets"
                 width={260}
                 height={82}
+                loading="lazy"
                 className="h-13 w-auto object-contain sm:h-15 lg:h-16"
               />
             </Link>
+
 
             {/* BRAND DESCRIPTION */}
 
@@ -514,6 +509,7 @@ export default function Footer() {
               Find, explore and book tickets for
               unforgettable experiences worldwide.
             </p>
+
 
             {/* CONTACT DETAILS */}
 
@@ -532,6 +528,7 @@ export default function Footer() {
                 hello@vizhatickets.com
               </a>
 
+
               {/* CONTACT SUPPORT */}
 
               <a
@@ -545,6 +542,7 @@ export default function Footer() {
                 Contact Support
               </a>
 
+
               {/* LOCATION */}
 
               <div className="flex items-center gap-2.5 text-[13px] text-white/90 sm:text-sm">
@@ -554,11 +552,14 @@ export default function Footer() {
 
                 Worldwide
               </div>
+
             </div>
+
 
             {/* SOCIAL LINKS */}
 
             <div className="mt-4 flex flex-wrap gap-2.5">
+
               {socialLinks.map(
                 ({ label, href, Icon }) => (
                   <a
@@ -576,60 +577,64 @@ export default function Footer() {
                   </a>
                 )
               )}
+
             </div>
+
           </div>
+
 
           {/* ==================================================
               EXPLORE
               ================================================== */}
 
           <div className="border-white/10 sm:border-l sm:pl-5 lg:pl-6">
+
             <FooterHeading>
               Explore
             </FooterHeading>
 
             <ul className="space-y-3">
+
               {exploreLinks.map((link) => (
                 <li key={link.label}>
-                  <FooterLink href={link.href}>
+                  <FooterLink to={link.to}>
                     {link.label}
                   </FooterLink>
                 </li>
               ))}
+
             </ul>
+
           </div>
+
 
           {/* ==================================================
               SUPPORT
               ================================================== */}
 
           <div className="border-white/10 sm:border-l sm:pl-5 lg:pl-6">
+
             <FooterHeading>
               Support
             </FooterHeading>
 
             <ul className="space-y-3">
+
               {supportLinks.map((link) => (
                 <li key={link.label}>
-                  <FooterLink href={link.href}>
+                  <FooterLink to={link.to}>
                     {link.label}
                   </FooterLink>
                 </li>
               ))}
+
             </ul>
+
           </div>
 
+
           {/* ==================================================
-              FOR ORGANIZERS — UPDATED
-
-              REMOVED:
-              - Create an Event
-              - Organizer Login
-
-              NEW:
-              - Contact Us
-              - Event request description
-              - /organizer-request destination
+              FOR ORGANIZERS
               ================================================== */}
 
           <div className="border-white/10 sm:border-l sm:pl-5 lg:pl-6">
@@ -638,6 +643,7 @@ export default function Footer() {
               For Organizers
             </FooterHeading>
 
+
             {/* SHORT DESCRIPTION */}
 
             <p className="mb-4 max-w-52.5 text-[12px] leading-[1.7] text-white/65">
@@ -645,13 +651,18 @@ export default function Footer() {
               proposal and connect with our team.
             </p>
 
+
             {/* ORGANIZER LINK */}
 
             <ul className="space-y-3">
+
               {organizerLinks.map((link) => (
                 <li key={link.label}>
-                  <FooterLink href={link.href}>
+
+                  <FooterLink to={link.to}>
+
                     <span className="inline-flex items-center gap-2">
+
                       <Send
                         size={15}
                         strokeWidth={1.9}
@@ -667,15 +678,21 @@ export default function Footer() {
                         className="text-[#ffb800]"
                         aria-hidden="true"
                       />
+
                     </span>
+
                   </FooterLink>
+
                 </li>
               ))}
+
             </ul>
+
           </div>
 
+
           {/* ==================================================
-              APP PROMOTION — ORIGINAL DESIGN PRESERVED
+              APP PROMOTION
               ================================================== */}
 
           <div className="h-fit min-w-0 rounded-2xl border border-[#a86a00] bg-[#100d08]/80 p-4 shadow-[0_0_25px_rgba(255,153,0,0.04)] backdrop-blur-sm sm:p-5">
@@ -686,19 +703,24 @@ export default function Footer() {
               Get the VizhaTickets App
             </p>
 
+
             {/* HEADING */}
 
             <h3 className="mt-2.5 max-w-85 text-[23px] font-extrabold leading-[1.12] tracking-tight text-white sm:text-[26px]">
+
               Events Everywhere
 
               <br />
 
               In Your Hands
+
             </h3>
+
 
             {/* APP STORE BADGES */}
 
             <div className="mt-4 flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+
               <StoreBadge
                 store="apple"
                 href="https://www.apple.com/app-store/"
@@ -708,30 +730,37 @@ export default function Footer() {
                 store="google"
                 href="https://play.google.com/store"
               />
+
             </div>
+
 
             {/* DISCOVER LINK */}
 
             <Link
-              href="/about"
+              to="/about"
               className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-white/70 transition hover:text-[#ffb800]"
             >
               Discover VizhaTickets
 
               <ArrowUpRight size={13} />
             </Link>
+
           </div>
+
         </div>
+
       </div>
 
+
       {/* ====================================================
-          DECORATIVE GOLDEN WAVES — PRESERVED
+          DECORATIVE GOLDEN WAVES
           ==================================================== */}
 
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 bottom-12 -z-10 h-28 overflow-hidden sm:bottom-14 sm:h-32"
       >
+
         <svg
           viewBox="0 0 1600 180"
           preserveAspectRatio="none"
@@ -739,6 +768,7 @@ export default function Footer() {
           fill="none"
           aria-hidden="true"
         >
+
           {/* FILL */}
 
           <path
@@ -747,6 +777,7 @@ export default function Footer() {
             fillOpacity="0.12"
           />
 
+
           {/* ORANGE WAVE */}
 
           <path
@@ -754,6 +785,7 @@ export default function Footer() {
             stroke="#ff8a00"
             strokeWidth="3"
           />
+
 
           {/* SECOND WAVE */}
 
@@ -764,6 +796,7 @@ export default function Footer() {
             strokeOpacity="0.8"
           />
 
+
           {/* THIRD WAVE */}
 
           <path
@@ -772,8 +805,11 @@ export default function Footer() {
             strokeWidth="1"
             strokeOpacity="0.6"
           />
+
         </svg>
+
       </div>
+
 
       {/* ====================================================
           COPYRIGHT BAR
@@ -783,11 +819,13 @@ export default function Footer() {
 
         <div className="mx-auto flex min-h-14 w-full max-w-[1800px] flex-col justify-center gap-2 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
 
+
           {/* COPYRIGHT */}
 
           <p className="text-xs text-white/85 sm:text-sm">
-            © 2026 VizhaTickets. All rights reserved.
+            © {new Date().getFullYear()} VizhaTickets. All rights reserved.
           </p>
+
 
           {/* LEGAL NAVIGATION */}
 
@@ -795,13 +833,15 @@ export default function Footer() {
             aria-label="Legal links"
             className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-white/85 sm:gap-x-4 sm:text-sm"
           >
+
             <FooterLink
-              href="/terms"
+              to="/terms"
               className="text-xs sm:text-sm"
             >
               Terms &amp; Conditions
             </FooterLink>
 
+
             <span
               aria-hidden="true"
               className="text-white/30"
@@ -809,29 +849,20 @@ export default function Footer() {
               |
             </span>
 
+
             <FooterLink
-              href="/privacy"
+              to="/privacy"
               className="text-xs sm:text-sm"
             >
               Privacy Policy
             </FooterLink>
 
-            <span
-              aria-hidden="true"
-              className="text-white/30"
-            >
-              |
-            </span>
-
-            <FooterLink
-              href="/sitemap"
-              className="text-xs sm:text-sm"
-            >
-              Sitemap
-            </FooterLink>
           </nav>
+
         </div>
+
       </div>
+
     </motion.footer>
   );
 }

@@ -1,6 +1,6 @@
-
 import {
   useEffect,
+  useMemo,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -16,7 +16,6 @@ import {
   CheckCircle2,
   ClipboardCheck,
   ContactRound,
-  FileText,
   ImagePlus,
   Info,
   Save,
@@ -31,31 +30,27 @@ import "./OrganizerForm.css";
 /* ==========================================================
    VIZHATICKETS — ADVANCED ORGANIZER FORM
 
-   Frontend-only development.
-
-   Supports:
-   - Individual and company organizers
+   Features:
+   - Company and Individual organizers
    - Five-step organizer onboarding
-   - Logo file selection and local preview
+   - International country selection
+   - International phone calling codes
+   - International WhatsApp numbers
+   - Logo upload and local preview
    - Contact and address information
-   - International phone numbers
    - Commercial agreement configuration
    - Verification and organizer status
-   - Admin notes and review
    - Save Draft / Save Organizer
-   - Editing previously saved organizers
+   - Existing organizer editing
 
-   SECURITY:
-   Do not store real bank details, identity documents,
-   passwords or other sensitive verification material
-   in localStorage.
+   Phone numbers are saved with their international prefix.
+   Example: +94771234567
 
-   The parent AdminApp saves the resulting record.
+   Logo previews are browser-local data URLs.
+   Use backend/object storage for permanent hosting.
    ========================================================== */
 
-export type OrganizerType =
-  | "Individual"
-  | "Company";
+export type OrganizerType = "Individual" | "Company";
 
 export type OrganizerStatus =
   | "Draft"
@@ -76,7 +71,6 @@ export type SettlementSchedule =
   | "Custom";
 
 export interface AdvancedOrganizer {
-  /* Existing AdminApp compatibility fields */
   id: string;
   name: string;
   contactName: string;
@@ -86,7 +80,6 @@ export interface AdvancedOrganizer {
   commission: number;
   createdAt: string;
 
-  /* Advanced organizer fields */
   organizerType: OrganizerType;
   displayName: string;
   logo: string;
@@ -128,6 +121,102 @@ type OrganizerDraft = Omit<
   "id" | "createdAt"
 >;
 
+type CountryOption = {
+  name: string;
+  code: string;
+  dial: string;
+};
+
+/* ==========================================================
+   INTERNATIONAL COUNTRY LIST
+   ========================================================== */
+
+const COUNTRIES: CountryOption[] = [
+  { name: "Afghanistan", code: "AF", dial: "+93" },
+  { name: "Albania", code: "AL", dial: "+355" },
+  { name: "Algeria", code: "DZ", dial: "+213" },
+  { name: "Argentina", code: "AR", dial: "+54" },
+  { name: "Australia", code: "AU", dial: "+61" },
+  { name: "Austria", code: "AT", dial: "+43" },
+  { name: "Bahrain", code: "BH", dial: "+973" },
+  { name: "Bangladesh", code: "BD", dial: "+880" },
+  { name: "Belgium", code: "BE", dial: "+32" },
+  { name: "Bhutan", code: "BT", dial: "+975" },
+  { name: "Brazil", code: "BR", dial: "+55" },
+  { name: "Brunei", code: "BN", dial: "+673" },
+  { name: "Cambodia", code: "KH", dial: "+855" },
+  { name: "Canada", code: "CA", dial: "+1" },
+  { name: "Chile", code: "CL", dial: "+56" },
+  { name: "China", code: "CN", dial: "+86" },
+  { name: "Colombia", code: "CO", dial: "+57" },
+  { name: "Croatia", code: "HR", dial: "+385" },
+  { name: "Cyprus", code: "CY", dial: "+357" },
+  { name: "Czechia", code: "CZ", dial: "+420" },
+  { name: "Denmark", code: "DK", dial: "+45" },
+  { name: "Egypt", code: "EG", dial: "+20" },
+  { name: "Estonia", code: "EE", dial: "+372" },
+  { name: "Ethiopia", code: "ET", dial: "+251" },
+  { name: "Finland", code: "FI", dial: "+358" },
+  { name: "France", code: "FR", dial: "+33" },
+  { name: "Germany", code: "DE", dial: "+49" },
+  { name: "Ghana", code: "GH", dial: "+233" },
+  { name: "Greece", code: "GR", dial: "+30" },
+  { name: "Hong Kong", code: "HK", dial: "+852" },
+  { name: "Hungary", code: "HU", dial: "+36" },
+  { name: "Iceland", code: "IS", dial: "+354" },
+  { name: "India", code: "IN", dial: "+91" },
+  { name: "Indonesia", code: "ID", dial: "+62" },
+  { name: "Iran", code: "IR", dial: "+98" },
+  { name: "Iraq", code: "IQ", dial: "+964" },
+  { name: "Ireland", code: "IE", dial: "+353" },
+  { name: "Israel", code: "IL", dial: "+972" },
+  { name: "Italy", code: "IT", dial: "+39" },
+  { name: "Japan", code: "JP", dial: "+81" },
+  { name: "Jordan", code: "JO", dial: "+962" },
+  { name: "Kenya", code: "KE", dial: "+254" },
+  { name: "Kuwait", code: "KW", dial: "+965" },
+  { name: "Laos", code: "LA", dial: "+856" },
+  { name: "Latvia", code: "LV", dial: "+371" },
+  { name: "Lebanon", code: "LB", dial: "+961" },
+  { name: "Lithuania", code: "LT", dial: "+370" },
+  { name: "Luxembourg", code: "LU", dial: "+352" },
+  { name: "Malaysia", code: "MY", dial: "+60" },
+  { name: "Maldives", code: "MV", dial: "+960" },
+  { name: "Malta", code: "MT", dial: "+356" },
+  { name: "Mauritius", code: "MU", dial: "+230" },
+  { name: "Mexico", code: "MX", dial: "+52" },
+  { name: "Myanmar", code: "MM", dial: "+95" },
+  { name: "Nepal", code: "NP", dial: "+977" },
+  { name: "Netherlands", code: "NL", dial: "+31" },
+  { name: "New Zealand", code: "NZ", dial: "+64" },
+  { name: "Nigeria", code: "NG", dial: "+234" },
+  { name: "Norway", code: "NO", dial: "+47" },
+  { name: "Oman", code: "OM", dial: "+968" },
+  { name: "Pakistan", code: "PK", dial: "+92" },
+  { name: "Philippines", code: "PH", dial: "+63" },
+  { name: "Poland", code: "PL", dial: "+48" },
+  { name: "Portugal", code: "PT", dial: "+351" },
+  { name: "Qatar", code: "QA", dial: "+974" },
+  { name: "Romania", code: "RO", dial: "+40" },
+  { name: "Russia", code: "RU", dial: "+7" },
+  { name: "Saudi Arabia", code: "SA", dial: "+966" },
+  { name: "Singapore", code: "SG", dial: "+65" },
+  { name: "South Africa", code: "ZA", dial: "+27" },
+  { name: "South Korea", code: "KR", dial: "+82" },
+  { name: "Spain", code: "ES", dial: "+34" },
+  { name: "Sri Lanka", code: "LK", dial: "+94" },
+  { name: "Sweden", code: "SE", dial: "+46" },
+  { name: "Switzerland", code: "CH", dial: "+41" },
+  { name: "Taiwan", code: "TW", dial: "+886" },
+  { name: "Thailand", code: "TH", dial: "+66" },
+  { name: "Turkey", code: "TR", dial: "+90" },
+  { name: "Ukraine", code: "UA", dial: "+380" },
+  { name: "United Arab Emirates", code: "AE", dial: "+971" },
+  { name: "United Kingdom", code: "GB", dial: "+44" },
+  { name: "United States", code: "US", dial: "+1" },
+  { name: "Vietnam", code: "VN", dial: "+84" },
+];
+
 const STEPS = [
   { title: "Organization", icon: Building2 },
   { title: "Contact Details", icon: ContactRound },
@@ -148,6 +237,10 @@ const CURRENCIES = [
 ];
 
 const MAX_LOGO_BYTES = 250 * 1024;
+
+/* ==========================================================
+   HELPERS
+   ========================================================== */
 
 function generateId(): string {
   return `ORG-${crypto.randomUUID()}`;
@@ -224,9 +317,16 @@ function validEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function normalizePhone(value: string): string {
+  return value.replace(/[^\d]/g, "");
+}
+
 function validInternationalPhone(value: string): boolean {
-  return /^\+[1-9]\d{6,14}$/.test(
-    value.replace(/[\s()-]/g, "")
+  const digits = normalizePhone(value);
+
+  return (
+    /^\d{7,15}$/.test(digits) &&
+    value.trim().startsWith("+")
   );
 }
 
@@ -235,11 +335,53 @@ function validOptionalUrl(value: string): boolean {
 
   try {
     const url = new URL(value.trim());
-    return url.protocol === "https:" || url.protocol === "http:";
+
+    return (
+      url.protocol === "https:" ||
+      url.protocol === "http:"
+    );
   } catch {
     return false;
   }
 }
+
+function getPhoneParts(
+  value: string,
+  fallbackDial = "+94"
+) {
+  const normalized = value.replace(/[^\d+]/g, "");
+
+  if (!normalized) {
+    return {
+      dial: fallbackDial,
+      local: "",
+    };
+  }
+
+  const matching = [...COUNTRIES]
+    .sort((a, b) => b.dial.length - a.dial.length)
+    .find((country) =>
+      normalized.startsWith(country.dial)
+    );
+
+  if (normalized.startsWith("+") && matching) {
+    return {
+      dial: matching.dial,
+      local: normalized
+        .slice(matching.dial.length)
+        .replace(/\D/g, ""),
+    };
+  }
+
+  return {
+    dial: fallbackDial,
+    local: normalized.replace(/\D/g, "").replace(/^0+/, ""),
+  };
+}
+
+/* ==========================================================
+   REUSABLE FORM COMPONENTS
+   ========================================================== */
 
 function Field({
   label,
@@ -254,7 +396,7 @@ function Field({
 }) {
   return (
     <label className="vof-field">
-      <span>
+      <span className="vof-field-label">
         {label}
         {required && <b> *</b>}
       </span>
@@ -276,10 +418,77 @@ function ReviewItem({
   return (
     <div className="vof-review-item">
       <span>{label}</span>
-      <strong>{value === "" ? "Not provided" : value}</strong>
+      <strong>
+        {value === "" ? "Not provided" : value}
+      </strong>
     </div>
   );
 }
+
+function PhoneInput({
+  label,
+  dialCode,
+  number,
+  onDialCodeChange,
+  onNumberChange,
+  required = false,
+  hint,
+}: {
+  label: string;
+  dialCode: string;
+  number: string;
+  onDialCodeChange: (value: string) => void;
+  onNumberChange: (value: string) => void;
+  required?: boolean;
+  hint?: string;
+}) {
+  return (
+    <Field
+      label={label}
+      required={required}
+      hint={hint}
+    >
+      <div className="vof-phone-control">
+        <div className="vof-select-wrap vof-dial-select">
+          <select
+            aria-label={`${label} country calling code`}
+            value={dialCode}
+            onChange={(event) =>
+              onDialCodeChange(event.target.value)
+            }
+          >
+            {COUNTRIES.map((country) => (
+              <option
+                key={`${country.code}-${country.dial}`}
+                value={country.dial}
+              >
+                {country.code} ({country.dial})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <input
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel-national"
+          value={number}
+          onChange={(event) =>
+            onNumberChange(
+              event.target.value.replace(/[^\d\s()-]/g, "")
+            )
+          }
+          placeholder="77 123 4567"
+          aria-label={label}
+        />
+      </div>
+    </Field>
+  );
+}
+
+/* ==========================================================
+   MAIN ORGANIZER FORM
+   ========================================================== */
 
 export default function OrganizerForm({
   initialOrganizer,
@@ -292,6 +501,36 @@ export default function OrganizerForm({
     () => getInitialDraft(initialOrganizer)
   );
 
+  const initialPhone = useMemo(
+    () =>
+      getPhoneParts(
+        initialOrganizer?.phone ?? "",
+        "+94"
+      ),
+    [initialOrganizer?.phone]
+  );
+
+  const initialWhatsapp = useMemo(
+    () =>
+      getPhoneParts(
+        initialOrganizer?.whatsapp ?? "",
+        "+94"
+      ),
+    [initialOrganizer?.whatsapp]
+  );
+
+  const [phoneDialCode, setPhoneDialCode] =
+    useState(initialPhone.dial);
+
+  const [phoneNumber, setPhoneNumber] =
+    useState(initialPhone.local);
+
+  const [whatsappDialCode, setWhatsappDialCode] =
+    useState(initialWhatsapp.dial);
+
+  const [whatsappNumber, setWhatsappNumber] =
+    useState(initialWhatsapp.local);
+
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -299,12 +538,14 @@ export default function OrganizerForm({
   const editing = Boolean(initialOrganizer?.id);
 
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
+    const originalOverflow =
+      document.body.style.overflow;
 
     document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.overflow =
+        originalOverflow;
     };
   }, []);
 
@@ -316,8 +557,13 @@ export default function OrganizerForm({
       ...current,
       [field]: value,
     }));
+
     setError("");
   };
+
+  /* ========================================================
+     LOGO UPLOAD
+     ======================================================== */
 
   const uploadLogo = async (
     event: ChangeEvent<HTMLInputElement>
@@ -363,6 +609,10 @@ export default function OrganizerForm({
     }
   };
 
+  /* ========================================================
+     VALIDATION
+     ======================================================== */
+
   const validateStep = (index: number): string => {
     if (index === 0) {
       if (draft.name.trim().length < 2) {
@@ -370,7 +620,7 @@ export default function OrganizerForm({
       }
 
       if (!draft.country.trim()) {
-        return "Enter the organizer's country.";
+        return "Select the organizer's country.";
       }
 
       if (!validOptionalUrl(draft.website)) {
@@ -387,15 +637,20 @@ export default function OrganizerForm({
         return "Enter a valid primary contact email address.";
       }
 
-      if (!validInternationalPhone(draft.phone)) {
-        return "Enter a valid international phone number starting with + and its country code.";
+      const fullPhone =
+        `${phoneDialCode}${normalizePhone(phoneNumber)}`;
+
+      if (!validInternationalPhone(fullPhone)) {
+        return "Enter a valid phone number with its international country code.";
       }
 
-      if (
-        draft.whatsapp.trim() &&
-        !validInternationalPhone(draft.whatsapp)
-      ) {
-        return "Enter a valid international WhatsApp number.";
+      if (whatsappNumber.trim()) {
+        const fullWhatsapp =
+          `${whatsappDialCode}${normalizePhone(whatsappNumber)}`;
+
+        if (!validInternationalPhone(fullWhatsapp)) {
+          return "Enter a valid international WhatsApp number.";
+        }
       }
 
       if (
@@ -447,17 +702,22 @@ export default function OrganizerForm({
       return;
     }
 
-    setStep((current) => Math.min(current + 1, STEPS.length - 1));
+    setStep((current) =>
+      Math.min(current + 1, STEPS.length - 1)
+    );
+
     setError("");
   };
+
+  /* ========================================================
+     SAVE ORGANIZER
+     ======================================================== */
 
   const saveOrganizer = async (
     status: OrganizerStatus
   ) => {
     if (saving || uploading) return;
 
-    // Drafts may be incomplete. Active/other statuses
-    // require completed essential organizer information.
     if (status !== "Draft") {
       const validationError = validateComplete();
 
@@ -471,7 +731,9 @@ export default function OrganizerForm({
 
     if (!name) {
       setStep(0);
-      setError("Enter at least an organizer name to save a draft.");
+      setError(
+        "Enter at least an organizer name to save a draft."
+      );
       return;
     }
 
@@ -480,23 +742,37 @@ export default function OrganizerForm({
 
     const record: AdvancedOrganizer = {
       ...draft,
+
       id: initialOrganizer?.id ?? generateId(),
+
       createdAt:
-        initialOrganizer?.createdAt ?? new Date().toISOString(),
+        initialOrganizer?.createdAt ??
+        new Date().toISOString(),
 
       name,
+
       displayName: draft.displayName.trim(),
-      registrationNumber: draft.registrationNumber.trim(),
+      registrationNumber:
+        draft.registrationNumber.trim(),
       website: draft.website.trim(),
       description: draft.description.trim(),
 
       contactName: draft.contactName.trim(),
       contactPosition: draft.contactPosition.trim(),
-      email: draft.email.trim().toLowerCase(),
-      phone: draft.phone.trim(),
-      whatsapp: draft.whatsapp.trim(),
 
-      financeContactName: draft.financeContactName.trim(),
+      email: draft.email.trim().toLowerCase(),
+
+      phone: phoneNumber.trim()
+        ? `${phoneDialCode}${normalizePhone(phoneNumber)}`
+        : "",
+
+      whatsapp: whatsappNumber.trim()
+        ? `${whatsappDialCode}${normalizePhone(whatsappNumber)}`
+        : "",
+
+      financeContactName:
+        draft.financeContactName.trim(),
+
       financeContactEmail:
         draft.financeContactEmail.trim().toLowerCase(),
 
@@ -509,6 +785,7 @@ export default function OrganizerForm({
 
       customSettlementTerms:
         draft.customSettlementTerms.trim(),
+
       adminNotes: draft.adminNotes.trim(),
 
       status,
@@ -536,37 +813,45 @@ export default function OrganizerForm({
     }
   };
 
+  /* ========================================================
+     STEP 1 — ORGANIZATION
+     ======================================================== */
+
   const renderStep = () => {
     switch (step) {
       case 0:
         return (
           <div className="vof-grid">
             <div className="vof-wide">
-              <Field label="Organizer Type" required>
+              <Field
+                label="Organizer Type"
+                required
+              >
                 <div className="vof-type-options">
-                  {(["Company", "Individual"] as const).map(
-                    (value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        className={
-                          draft.organizerType === value
-                            ? "vof-type active"
-                            : "vof-type"
-                        }
-                        onClick={() =>
-                          update("organizerType", value)
-                        }
-                      >
-                        {value === "Company" ? (
-                          <Building2 size={19} />
-                        ) : (
-                          <ContactRound size={19} />
-                        )}
-                        {value}
-                      </button>
-                    )
-                  )}
+                  {(
+                    ["Company", "Individual"] as const
+                  ).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={
+                        draft.organizerType === value
+                          ? "vof-type active"
+                          : "vof-type"
+                      }
+                      onClick={() =>
+                        update("organizerType", value)
+                      }
+                    >
+                      {value === "Company" ? (
+                        <Building2 size={19} />
+                      ) : (
+                        <ContactRound size={19} />
+                      )}
+
+                      {value}
+                    </button>
+                  ))}
                 </div>
               </Field>
             </div>
@@ -582,8 +867,8 @@ export default function OrganizerForm({
               >
                 <input
                   value={draft.name}
-                  onChange={(e) =>
-                    update("name", e.target.value)
+                  onChange={(event) =>
+                    update("name", event.target.value)
                   }
                   maxLength={160}
                   placeholder={
@@ -598,8 +883,8 @@ export default function OrganizerForm({
             <Field label="Public Display Name">
               <input
                 value={draft.displayName}
-                onChange={(e) =>
-                  update("displayName", e.target.value)
+                onChange={(event) =>
+                  update("displayName", event.target.value)
                 }
                 placeholder="Name displayed on event pages"
                 maxLength={160}
@@ -607,22 +892,38 @@ export default function OrganizerForm({
             </Field>
 
             <Field label="Country" required>
-              <input
-                value={draft.country}
-                onChange={(e) =>
-                  update("country", e.target.value)
-                }
-                maxLength={100}
-                placeholder="Sri Lanka"
-              />
+              <div className="vof-select-wrap">
+                <select
+                  value={draft.country}
+                  onChange={(event) =>
+                    update("country", event.target.value)
+                  }
+                >
+                  <option value="">
+                    Select country
+                  </option>
+
+                  {COUNTRIES.map((country) => (
+                    <option
+                      key={country.code}
+                      value={country.name}
+                    >
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </Field>
 
             {draft.organizerType === "Company" && (
               <Field label="Business Registration Number">
                 <input
                   value={draft.registrationNumber}
-                  onChange={(e) =>
-                    update("registrationNumber", e.target.value)
+                  onChange={(event) =>
+                    update(
+                      "registrationNumber",
+                      event.target.value
+                    )
                   }
                   maxLength={100}
                   placeholder="Optional during onboarding"
@@ -634,8 +935,8 @@ export default function OrganizerForm({
               <input
                 type="url"
                 value={draft.website}
-                onChange={(e) =>
-                  update("website", e.target.value)
+                onChange={(event) =>
+                  update("website", event.target.value)
                 }
                 placeholder="https://example.com"
               />
@@ -646,8 +947,8 @@ export default function OrganizerForm({
                 <textarea
                   rows={4}
                   value={draft.description}
-                  onChange={(e) =>
-                    update("description", e.target.value)
+                  onChange={(event) =>
+                    update("description", event.target.value)
                   }
                   placeholder="Describe the company, organizer and types of events they manage..."
                 />
@@ -660,12 +961,17 @@ export default function OrganizerForm({
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
-                    onChange={(e) => void uploadLogo(e)}
+                    onChange={(event) =>
+                      void uploadLogo(event)
+                    }
                     disabled={uploading}
                     aria-label="Upload organizer logo"
                   />
+
                   <ImagePlus size={28} />
+
                   <strong>Upload Logo</strong>
+
                   <small>
                     JPG, PNG or WebP · Max 250 KB for local preview
                   </small>
@@ -692,14 +998,21 @@ export default function OrganizerForm({
           </div>
         );
 
+      /* ======================================================
+         STEP 2 — CONTACT DETAILS
+         ====================================================== */
+
       case 1:
         return (
           <div className="vof-grid">
-            <Field label="Primary Contact Person" required>
+            <Field
+              label="Primary Contact Person"
+              required
+            >
               <input
                 value={draft.contactName}
-                onChange={(e) =>
-                  update("contactName", e.target.value)
+                onChange={(event) =>
+                  update("contactName", event.target.value)
                 }
                 placeholder="Contact person's full name"
               />
@@ -708,8 +1021,8 @@ export default function OrganizerForm({
             <Field label="Job Title / Position">
               <input
                 value={draft.contactPosition}
-                onChange={(e) =>
-                  update("contactPosition", e.target.value)
+                onChange={(event) =>
+                  update("contactPosition", event.target.value)
                 }
                 placeholder="Director / Manager / Coordinator"
               />
@@ -718,51 +1031,58 @@ export default function OrganizerForm({
             <Field label="Contact Email" required>
               <input
                 type="email"
+                autoComplete="email"
                 value={draft.email}
-                onChange={(e) =>
-                  update("email", e.target.value)
+                onChange={(event) =>
+                  update("email", event.target.value)
                 }
                 placeholder="organizer@example.com"
               />
             </Field>
 
-            <Field
+            <PhoneInput
               label="International Phone Number"
               required
-              hint="Enter the full number with country code."
-            >
-              <input
-                type="tel"
-                value={draft.phone}
-                onChange={(e) =>
-                  update("phone", e.target.value)
-                }
-                placeholder="+94 77 123 4567"
-              />
-            </Field>
+              hint="Choose the country calling code, then enter the phone number."
+              dialCode={phoneDialCode}
+              number={phoneNumber}
+              onDialCodeChange={(value) => {
+                setPhoneDialCode(value);
+                setError("");
+              }}
+              onNumberChange={(value) => {
+                setPhoneNumber(value);
+                setError("");
+              }}
+            />
 
-            <Field label="WhatsApp Number">
-              <input
-                type="tel"
-                value={draft.whatsapp}
-                onChange={(e) =>
-                  update("whatsapp", e.target.value)
-                }
-                placeholder="+44 7700 900000"
-              />
-            </Field>
+            <PhoneInput
+              label="WhatsApp Number"
+              dialCode={whatsappDialCode}
+              number={whatsappNumber}
+              onDialCodeChange={(value) => {
+                setWhatsappDialCode(value);
+                setError("");
+              }}
+              onNumberChange={(value) => {
+                setWhatsappNumber(value);
+                setError("");
+              }}
+            />
 
             <div className="vof-divider vof-wide">
               <strong>Business Address</strong>
-              <span>Optional during initial onboarding</span>
+              <span>
+                Optional during initial onboarding
+              </span>
             </div>
 
             <div className="vof-wide">
               <Field label="Address Line 1">
                 <input
                   value={draft.addressLine1}
-                  onChange={(e) =>
-                    update("addressLine1", e.target.value)
+                  onChange={(event) =>
+                    update("addressLine1", event.target.value)
                   }
                   placeholder="Street address / building"
                 />
@@ -773,8 +1093,8 @@ export default function OrganizerForm({
               <Field label="Address Line 2">
                 <input
                   value={draft.addressLine2}
-                  onChange={(e) =>
-                    update("addressLine2", e.target.value)
+                  onChange={(event) =>
+                    update("addressLine2", event.target.value)
                   }
                   placeholder="Suite / unit / additional address"
                 />
@@ -784,8 +1104,8 @@ export default function OrganizerForm({
             <Field label="City">
               <input
                 value={draft.city}
-                onChange={(e) =>
-                  update("city", e.target.value)
+                onChange={(event) =>
+                  update("city", event.target.value)
                 }
                 placeholder="Jaffna / London"
               />
@@ -794,8 +1114,8 @@ export default function OrganizerForm({
             <Field label="State / Province">
               <input
                 value={draft.region}
-                onChange={(e) =>
-                  update("region", e.target.value)
+                onChange={(event) =>
+                  update("region", event.target.value)
                 }
                 placeholder="Northern Province"
               />
@@ -804,9 +1124,10 @@ export default function OrganizerForm({
             <Field label="Postal Code">
               <input
                 value={draft.postalCode}
-                onChange={(e) =>
-                  update("postalCode", e.target.value)
+                onChange={(event) =>
+                  update("postalCode", event.target.value)
                 }
+                placeholder="Postal code"
               />
             </Field>
 
@@ -818,8 +1139,11 @@ export default function OrganizerForm({
             <Field label="Finance Contact Name">
               <input
                 value={draft.financeContactName}
-                onChange={(e) =>
-                  update("financeContactName", e.target.value)
+                onChange={(event) =>
+                  update(
+                    "financeContactName",
+                    event.target.value
+                  )
                 }
                 placeholder="Finance manager"
               />
@@ -829,14 +1153,21 @@ export default function OrganizerForm({
               <input
                 type="email"
                 value={draft.financeContactEmail}
-                onChange={(e) =>
-                  update("financeContactEmail", e.target.value)
+                onChange={(event) =>
+                  update(
+                    "financeContactEmail",
+                    event.target.value
+                  )
                 }
                 placeholder="finance@example.com"
               />
             </Field>
           </div>
         );
+
+      /* ======================================================
+         STEP 3 — COMMERCIAL
+         ====================================================== */
 
       case 2:
         return (
@@ -851,64 +1182,82 @@ export default function OrganizerForm({
                 max="100"
                 step="0.01"
                 value={draft.commission}
-                onChange={(e) =>
-                  update("commission", Number(e.target.value))
+                onChange={(event) =>
+                  update(
+                    "commission",
+                    Number(event.target.value)
+                  )
                 }
               />
             </Field>
 
             <Field label="Settlement Currency">
-              <select
-                value={draft.settlementCurrency}
-                onChange={(e) =>
-                  update("settlementCurrency", e.target.value)
-                }
-              >
-                {CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
+              <div className="vof-select-wrap">
+                <select
+                  value={draft.settlementCurrency}
+                  onChange={(event) =>
+                    update(
+                      "settlementCurrency",
+                      event.target.value
+                    )
+                  }
+                >
+                  {CURRENCIES.map((currency) => (
+                    <option
+                      key={currency}
+                      value={currency}
+                    >
+                      {currency}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </Field>
 
             <Field label="Settlement Schedule">
-              <select
-                value={draft.settlementSchedule}
-                onChange={(e) =>
-                  update(
-                    "settlementSchedule",
-                    e.target.value as SettlementSchedule
-                  )
-                }
-              >
-                <option value="After Event">After Event</option>
-                <option value="Weekly">Weekly</option>
-                <option value="Monthly">Monthly</option>
-                <option value="Custom">Custom</option>
-              </select>
+              <div className="vof-select-wrap">
+                <select
+                  value={draft.settlementSchedule}
+                  onChange={(event) =>
+                    update(
+                      "settlementSchedule",
+                      event.target.value as SettlementSchedule
+                    )
+                  }
+                >
+                  <option value="After Event">
+                    After Event
+                  </option>
+                  <option value="Weekly">Weekly</option>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </div>
             </Field>
 
             <Field label="Agreement Date">
               <input
                 type="date"
                 value={draft.agreementDate}
-                onChange={(e) =>
-                  update("agreementDate", e.target.value)
+                onChange={(event) =>
+                  update("agreementDate", event.target.value)
                 }
               />
             </Field>
 
             {draft.settlementSchedule === "Custom" && (
               <div className="vof-wide">
-                <Field label="Custom Settlement Terms" required>
+                <Field
+                  label="Custom Settlement Terms"
+                  required
+                >
                   <textarea
                     rows={4}
                     value={draft.customSettlementTerms}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       update(
                         "customSettlementTerms",
-                        e.target.value
+                        event.target.value
                       )
                     }
                     placeholder="Describe the agreed settlement schedule..."
@@ -919,8 +1268,9 @@ export default function OrganizerForm({
 
             <div className="vof-info vof-wide">
               <Info size={20} />
+
               <p>
-                Commission and settlement schedules are only
+                Commission and settlement schedules are
                 administrative records during frontend testing.
                 Actual organizer payouts require verified payment,
                 refund, tax and gateway-fee information. Do not
@@ -930,41 +1280,57 @@ export default function OrganizerForm({
           </div>
         );
 
+      /* ======================================================
+         STEP 4 — VERIFICATION
+         ====================================================== */
+
       case 3:
         return (
           <div className="vof-grid">
             <Field label="Verification Status">
-              <select
-                value={draft.verificationStatus}
-                onChange={(e) =>
-                  update(
-                    "verificationStatus",
-                    e.target.value as VerificationStatus
-                  )
-                }
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="Under Review">Under Review</option>
-                <option value="Verified">Verified</option>
-                <option value="Rejected">Rejected</option>
-              </select>
+              <div className="vof-select-wrap">
+                <select
+                  value={draft.verificationStatus}
+                  onChange={(event) =>
+                    update(
+                      "verificationStatus",
+                      event.target.value as VerificationStatus
+                    )
+                  }
+                >
+                  <option value="Not Started">
+                    Not Started
+                  </option>
+                  <option value="Under Review">
+                    Under Review
+                  </option>
+                  <option value="Verified">
+                    Verified
+                  </option>
+                  <option value="Rejected">
+                    Rejected
+                  </option>
+                </select>
+              </div>
             </Field>
 
             <Field label="Organizer Account Status">
-              <select
-                value={draft.status}
-                onChange={(e) =>
-                  update(
-                    "status",
-                    e.target.value as OrganizerStatus
-                  )
-                }
-              >
-                <option value="Draft">Draft</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
-              </select>
+              <div className="vof-select-wrap">
+                <select
+                  value={draft.status}
+                  onChange={(event) =>
+                    update(
+                      "status",
+                      event.target.value as OrganizerStatus
+                    )
+                  }
+                >
+                  <option value="Draft">Draft</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Suspended">Suspended</option>
+                </select>
+              </div>
             </Field>
 
             <div className="vof-wide">
@@ -972,8 +1338,8 @@ export default function OrganizerForm({
                 <textarea
                   rows={5}
                   value={draft.adminNotes}
-                  onChange={(e) =>
-                    update("adminNotes", e.target.value)
+                  onChange={(event) =>
+                    update("adminNotes", event.target.value)
                   }
                   placeholder="Onboarding progress, agreement follow-ups, or review notes. Do not enter sensitive identity or financial information."
                 />
@@ -982,21 +1348,27 @@ export default function OrganizerForm({
 
             <div className="vof-info vof-wide">
               <ShieldCheck size={21} />
+
               <p>
                 Document verification will later use protected
-                backend storage. This frontend form records the
-                review status only; selecting Verified here is
-                not proof that identity checks have occurred.
+                backend storage. This form records the review
+                status only; selecting Verified here is not
+                proof that identity checks occurred.
               </p>
             </div>
           </div>
         );
+
+      /* ======================================================
+         STEP 5 — REVIEW & SAVE
+         ====================================================== */
 
       default:
         return (
           <div className="vof-review">
             <div className="vof-review-head">
               <BadgeCheck size={26} />
+
               <div>
                 <h3>Review Organizer Profile</h3>
                 <p>
@@ -1018,46 +1390,70 @@ export default function OrganizerForm({
                 label="Organizer"
                 value={draft.name}
               />
+
               <ReviewItem
                 label="Type"
                 value={draft.organizerType}
               />
+
               <ReviewItem
                 label="Country"
                 value={draft.country}
               />
+
               <ReviewItem
                 label="Display Name"
                 value={draft.displayName}
               />
+
               <ReviewItem
                 label="Contact"
                 value={draft.contactName}
               />
+
               <ReviewItem
                 label="Email"
                 value={draft.email}
               />
+
               <ReviewItem
                 label="Phone"
-                value={draft.phone}
+                value={
+                  phoneNumber
+                    ? `${phoneDialCode} ${phoneNumber}`
+                    : ""
+                }
               />
+
+              <ReviewItem
+                label="WhatsApp"
+                value={
+                  whatsappNumber
+                    ? `${whatsappDialCode} ${whatsappNumber}`
+                    : ""
+                }
+              />
+
               <ReviewItem
                 label="Commission"
                 value={`${draft.commission}%`}
               />
+
               <ReviewItem
                 label="Settlement Currency"
                 value={draft.settlementCurrency}
               />
+
               <ReviewItem
                 label="Settlement Schedule"
                 value={draft.settlementSchedule}
               />
+
               <ReviewItem
                 label="Verification"
                 value={draft.verificationStatus}
               />
+
               <ReviewItem
                 label="Status"
                 value={draft.status}
@@ -1066,6 +1462,7 @@ export default function OrganizerForm({
 
             <div className="vof-info">
               <ClipboardCheck size={20} />
+
               <p>
                 Saving an organizer does not automatically
                 approve or publish their events. Each event
@@ -1077,13 +1474,23 @@ export default function OrganizerForm({
     }
   };
 
-  const submitStep = (event: FormEvent<HTMLFormElement>) => {
+  /* ========================================================
+     FORM SUBMISSION
+     ======================================================== */
+
+  const submitStep = (
+    event: FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
 
     if (step < STEPS.length - 1) {
       goNext();
     }
   };
+
+  /* ========================================================
+     MAIN UI
+     ======================================================== */
 
   return (
     <div
@@ -1098,10 +1505,14 @@ export default function OrganizerForm({
         role="dialog"
         aria-modal="true"
         aria-label={
-          editing ? "Edit Organizer" : "Add New Organizer"
+          editing
+            ? "Edit Organizer"
+            : "Add New Organizer"
         }
         className="vof-dialog"
       >
+        {/* HEADER */}
+
         <header className="vof-header">
           <div>
             <p className="vof-eyebrow">
@@ -1131,7 +1542,12 @@ export default function OrganizerForm({
           </button>
         </header>
 
-        <div className="vof-progress">
+        {/* PROGRESS STEPS */}
+
+        <div
+          className="vof-progress"
+          aria-label="Organizer setup steps"
+        >
           {STEPS.map((item, index) => {
             const Icon = item.icon;
 
@@ -1163,10 +1579,19 @@ export default function OrganizerForm({
           })}
         </div>
 
-        <form className="vof-form" onSubmit={submitStep}>
-          <div className="vof-body" key={step}>
+        {/* FORM */}
+
+        <form
+          className="vof-form"
+          onSubmit={submitStep}
+        >
+          <div
+            className="vof-body"
+            key={step}
+          >
             <div className="vof-content-heading">
               <h3>{STEPS[step].title}</h3>
+
               <p>
                 Step {step + 1} of {STEPS.length}
               </p>
@@ -1175,12 +1600,17 @@ export default function OrganizerForm({
             {renderStep()}
 
             {error && (
-              <div className="vof-error" role="alert">
+              <div
+                className="vof-error"
+                role="alert"
+              >
                 <Info size={18} />
                 <span>{error}</span>
               </div>
             )}
           </div>
+
+          {/* FOOTER */}
 
           <footer className="vof-footer">
             <button
@@ -1196,6 +1626,7 @@ export default function OrganizerForm({
               }}
             >
               <ArrowLeft size={16} />
+
               {step === 0 ? "Cancel" : "Back"}
             </button>
 
@@ -1204,7 +1635,9 @@ export default function OrganizerForm({
                 type="button"
                 className="vof-btn vof-btn-outline"
                 disabled={saving || uploading}
-                onClick={() => void saveOrganizer("Draft")}
+                onClick={() =>
+                  void saveOrganizer("Draft")
+                }
               >
                 <Save size={16} />
                 Save Draft
@@ -1229,6 +1662,7 @@ export default function OrganizerForm({
                   }
                 >
                   <CheckCircle2 size={17} />
+
                   {saving
                     ? "Saving..."
                     : "Save Organizer"}

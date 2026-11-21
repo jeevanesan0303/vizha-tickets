@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
   type ReactNode,
+  type ChangeEvent,
 } from "react";
 
 import { useNavigate } from "react-router-dom";
@@ -23,6 +24,11 @@ import {
   CreditCard,
   Download,
   Eye,
+  EyeOff,
+  Camera,
+  LockKeyhole,
+  Smartphone,
+  FileText,
   Globe2,
   Inbox,
   LayoutDashboard,
@@ -58,6 +64,7 @@ import OrganizerForm, {
 
 import "./admin.css";
 import ReportsPage from "./components/ReportsPage";
+import DocumentsPage from "./components/DocumentsPage";
 
 /* ==========================================================
    VIZHATICKETS — ADMIN APP
@@ -101,6 +108,7 @@ type Section =
   | "customers"
   | "finance"
   | "reports"
+  | "documents"
   | "settings";
 
 type RequestType = "Contact" | "Organizer";
@@ -207,6 +215,11 @@ const menu: Array<{
     id: "reports",
     label: "Reports",
     icon: BarChart3,
+  },
+  {
+    id: "documents",
+    label: "Documents",
+    icon: FileText,
   },
   {
     id: "settings",
@@ -1073,6 +1086,100 @@ export default function AdminApp() {
     useState("7");
 
   const [notice, setNotice] = useState("");
+
+  /* ADMIN SETTINGS — local preview profile only.
+     Real account credentials and session controls require backend APIs. */
+  const [settingsTab, setSettingsTab] = useState<"profile" | "security">("profile");
+  const [adminProfile, setAdminProfile] = useState<{
+    fullName: string;
+    email: string;
+    phone: string;
+    photo: string;
+  }>(() => {
+    try {
+      const stored = localStorage.getItem("vizha_admin_profile_v1");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          fullName: String(parsed.fullName ?? "Admin Preview"),
+          email: String(parsed.email ?? ""),
+          phone: String(parsed.phone ?? ""),
+          photo: String(parsed.photo ?? ""),
+        };
+      }
+    } catch {
+      // Use default preview profile if browser storage is unavailable.
+    }
+    return { fullName: "Admin Preview", email: "", phone: "", photo: "" };
+  });
+  const [profileDraft, setProfileDraft] = useState(adminProfile);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+
+  const handleProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setNotice("Please select an image file.");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      setNotice("Please choose a profile photo smaller than 1 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setProfileDraft((previous) => ({ ...previous, photo: reader.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveAdminProfile = () => {
+    const fullName = profileDraft.fullName.trim();
+    const email = profileDraft.email.trim();
+    const phone = profileDraft.phone.trim();
+    if (!fullName) {
+      setNotice("Full name is required.");
+      return;
+    }
+    if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      setNotice("Please enter a valid email address.");
+      return;
+    }
+    const updated = { ...profileDraft, fullName, email, phone };
+    try {
+      localStorage.setItem("vizha_admin_profile_v1", JSON.stringify(updated));
+      setAdminProfile(updated);
+      setProfileDraft(updated);
+      setNotice("Preview profile saved on this browser.");
+    } catch {
+      setNotice("Unable to save profile. Browser storage may be full.");
+    }
+  };
+
+  const requestPasswordUpdate = () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setNotice("Complete all password fields.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setNotice("New password must contain at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setNotice("New password and confirmation do not match.");
+      return;
+    }
+    setNotice("Password changes require secure backend authentication. No password has been changed.");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
 
   /* ========================================================
      STORED DATA
@@ -3154,75 +3261,153 @@ export default function AdminApp() {
   const renderSettings = () => (
     <>
       <PageHeading
-        eyebrow="Platform Configuration"
+        eyebrow="Account Settings"
         title="Settings"
-        description="Administrator account and platform settings preview."
+        description="Manage your profile and account security."
       />
 
-      <div className="va-panel">
-        <div className="va-settings-item">
-          <ShieldCheck size={26} />
-
-          <div>
-            <strong>Administrator Authentication</strong>
-
-            <p>
-              This dashboard uses a development-only
-              administrator preview session. Production
-              security requires backend authentication,
-              role verification and protected APIs.
-            </p>
-          </div>
-
-          <Status value="Draft" />
-        </div>
-
-        <div className="va-settings-item">
-          <Globe2 size={26} />
-
-          <div>
-            <strong>International Ticketing</strong>
-
-            <p>
-              Events support different countries,
-              cities and currencies. Financial totals
-              remain separated by currency.
-            </p>
-          </div>
-        </div>
-
-        <div className="va-settings-item">
-          <Building2 size={26} />
-
-          <div>
-            <strong>Organizer Management</strong>
-
-            <p>
-              Organizer profiles have independent
-              approval, verification, commission
-              and settlement settings.
-            </p>
-          </div>
-
-          <Check size={20} />
-        </div>
-
-        <div className="va-settings-item">
-          <Ticket size={26} />
-
-          <div>
-            <strong>Ticket Issuance Rules</strong>
-
-            <p>
-              Bookings and QR tickets are issued
-              only after verified successful payment.
-              One QR code belongs to each booking.
-            </p>
-          </div>
-
-          <Check size={20} />
-        </div>
+      <div style={{
+        display: "flex", gap: 8, flexWrap: "wrap",
+        marginBottom: 20,
+      }}>
+        <button
+          type="button"
+          onClick={() => setSettingsTab("profile")}
+          className={settingsTab === "profile" ? "va-primary-btn" : "va-secondary-btn"}
+          style={{ display: "inline-flex", alignItems: "center", gap: 9 }}
+        >
+          <Users size={17} /> Profile
+        </button>
+        <button
+          type="button"
+          onClick={() => setSettingsTab("security")}
+          className={settingsTab === "security" ? "va-primary-btn" : "va-secondary-btn"}
+          style={{ display: "inline-flex", alignItems: "center", gap: 9 }}
+        >
+          <ShieldCheck size={17} /> Security &amp; Password
+        </button>
       </div>
+
+      {settingsTab === "profile" ? (
+        <div className="va-panel" style={{ maxWidth: 940 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", marginBottom: 26 }}>
+            <div style={{
+              width: 78, height: 78, borderRadius: 20, overflow: "hidden",
+              display: "grid", placeItems: "center",
+              background: "#fff0d5", color: "#a86100", fontSize: 24, fontWeight: 800,
+              flexShrink: 0,
+            }}>
+              {profileDraft.photo ? (
+                <img src={profileDraft.photo} alt="Admin profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                profileDraft.fullName.split(/\\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase()
+              )}
+            </div>
+            <div>
+              <strong style={{ display: "block", fontSize: 17, marginBottom: 6 }}>Profile Photo</strong>
+              <label className="va-secondary-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <Camera size={16} /> Change Photo
+                <input type="file" accept="image/*" onChange={handleProfilePhoto} style={{ display: "none" }} />
+              </label>
+              <p className="va-muted" style={{ margin: "7px 0 0", fontSize: 12 }}>JPG or PNG, up to 1 MB</p>
+            </div>
+          </div>
+
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+            gap: 18, marginBottom: 24,
+          }}>
+            <FormField label="Full Name">
+              <input type="text" value={profileDraft.fullName}
+                onChange={(event) => setProfileDraft((prev) => ({ ...prev, fullName: event.target.value }))}
+                placeholder="Administrator name" />
+            </FormField>
+            <FormField label="Email Address">
+              <input type="email" value={profileDraft.email}
+                onChange={(event) => setProfileDraft((prev) => ({ ...prev, email: event.target.value }))}
+                placeholder="admin@example.com" />
+            </FormField>
+            <FormField label="Phone Number">
+              <input type="tel" value={profileDraft.phone}
+                onChange={(event) => setProfileDraft((prev) => ({ ...prev, phone: event.target.value }))}
+                placeholder="+94 77 000 0000" />
+            </FormField>
+            <FormField label="Account Role">
+              <input type="text" value="Administrator" readOnly
+                style={{ background: "#f5f5f5", cursor: "not-allowed" }} />
+            </FormField>
+          </div>
+          <button type="button" className="va-primary-btn" onClick={saveAdminProfile}>
+            <Check size={17} /> Save Changes
+          </button>
+          <p className="va-muted" style={{ fontSize: 12, marginTop: 14 }}>
+            Profile details are saved only in this browser preview, not to a server.
+          </p>
+        </div>
+      ) : (
+        <div className="va-panel" style={{ maxWidth: 940 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>
+            <ShieldCheck size={25} style={{ color: "#bd760c" }} />
+            <div>
+              <strong style={{ display: "block", fontSize: 17 }}>Change Password</strong>
+              <p className="va-muted" style={{ margin: "4px 0 0" }}>Keep your administrator account secure.</p>
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: 17, maxWidth: 560 }}>
+            <FormField label="Current Password">
+              <input type={showPasswords ? "text" : "password"} autoComplete="current-password"
+                value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)}
+                placeholder="Enter current password" />
+            </FormField>
+            <FormField label="New Password">
+              <input type={showPasswords ? "text" : "password"} autoComplete="new-password"
+                value={newPassword} onChange={(event) => setNewPassword(event.target.value)}
+                placeholder="At least 8 characters" />
+            </FormField>
+            <FormField label="Confirm New Password">
+              <input type={showPasswords ? "text" : "password"} autoComplete="new-password"
+                value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Re-enter new password" />
+            </FormField>
+            <button type="button" className="va-secondary-btn"
+              onClick={() => setShowPasswords((value) => !value)}
+              style={{ width: "fit-content", display: "inline-flex", alignItems: "center", gap: 8 }}>
+              {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showPasswords ? "Hide Passwords" : "Show Passwords"}
+            </button>
+            <button type="button" className="va-primary-btn"
+              onClick={requestPasswordUpdate} style={{ width: "fit-content" }}>
+              <LockKeyhole size={17} /> Update Password
+            </button>
+          </div>
+          <p className="va-muted" style={{ marginTop: 14, fontSize: 12 }}>
+            Preview only: updating a real password requires backend authentication.
+            Passwords are not saved in browser storage.
+          </p>
+          <div style={{ borderTop: "1px solid #ece5dc", marginTop: 26, paddingTop: 22 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Smartphone size={21} style={{ color: "#bd760c" }} />
+                <div>
+                  <strong>Two-Factor Authentication</strong>
+                  <p className="va-muted" style={{ margin: "4px 0 0", fontSize: 13 }}>Extra protection for your account</p>
+                </div>
+              </div>
+              <span className="va-small-tag">Requires backend</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <LogOut size={21} style={{ color: "#bd760c" }} />
+                <div>
+                  <strong>Log Out All Devices</strong>
+                  <p className="va-muted" style={{ margin: "4px 0 0", fontSize: 13 }}>End all other active sessions</p>
+                </div>
+              </div>
+              <span className="va-small-tag">Requires backend</span>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -3254,13 +3439,23 @@ export default function AdminApp() {
         return renderFinance();
 
       case "reports":
-  return (
-    <ReportsPage
-      events={events}
-      organizers={organizers}
-      bookings={bookings}
-    />
-  );
+        return (
+          <ReportsPage
+            events={events}
+            organizers={organizers}
+            bookings={bookings}
+          />
+        );
+
+      case "documents":
+        return (
+          <DocumentsPage
+            events={events}
+            organizers={organizers}
+            bookings={bookings}
+            onNotice={setNotice}
+          />
+        );
 
       case "settings":
         return renderSettings();
@@ -3483,12 +3678,16 @@ export default function AdminApp() {
                   setNotificationsOpen(false);
                 }}
               >
-                <div className="va-avatar">
-                  VA
+                <div className="va-avatar" style={{ overflow: "hidden" }}>
+                  {adminProfile.photo ? (
+                    <img src={adminProfile.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    adminProfile.fullName.split(/\\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase()
+                  )}
                 </div>
 
                 <div className="va-profile-copy">
-                  <strong>Admin Preview</strong>
+                  <strong>{adminProfile.fullName}</strong>
                   <span>Demo workspace</span>
                 </div>
 

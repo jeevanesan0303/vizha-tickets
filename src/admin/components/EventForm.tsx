@@ -4,6 +4,7 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
+  type ReactNode,
 } from "react";
 
 import {
@@ -12,6 +13,7 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ChevronDown,
   ImagePlus,
   Info,
   Map,
@@ -27,29 +29,11 @@ import "./EventForm.css";
 
 /* ==========================================================
    VIZHATICKETS — ADVANCED EVENT FORM
-
-   Frontend development edition.
-
-   Supports:
-   - 6-step event creation
-   - Dynamic ticket categories
-   - Individual tier capacity, price and ticket limits
-   - Event banner upload
-   - Venue layout image upload
-   - Venue / admission types
-   - Event dates and locations
-   - Sales dates and refund policy
-   - Draft and Publish
-   - Existing event editing
-
-   Browser image preview is NOT permanent hosting.
-   Backend storage and verified ticket inventory
-   will be implemented separately.
+   International Country Support
+   Premium Cream / Gold / Charcoal Design
    ========================================================== */
 
-export type EventPublicationStatus =
-  | "Draft"
-  | "Published";
+export type EventPublicationStatus = "Draft" | "Published";
 
 export type VenueAdmissionType =
   | "general"
@@ -101,7 +85,6 @@ export interface AdvancedEvent {
   status: EventPublicationStatus;
   createdAt: string;
 
-  // Compatibility with the current admin event model.
   price: number;
   capacity: number;
 }
@@ -123,6 +106,10 @@ type EventDraft = Omit<
   "id" | "createdAt" | "price" | "capacity"
 >;
 
+/* ==========================================================
+   OPTIONS
+   ========================================================== */
+
 const CATEGORIES = [
   "Concerts",
   "Cultural",
@@ -137,13 +124,221 @@ const CATEGORIES = [
 
 const CURRENCIES = [
   "LKR",
+  "USD",
   "GBP",
   "EUR",
   "CHF",
-  "USD",
   "INR",
   "CAD",
   "AUD",
+  "SGD",
+  "AED",
+  "JPY",
+  "CNY",
+  "MYR",
+  "THB",
+  "NZD",
+  "ZAR",
+];
+
+const COUNTRIES = [
+  "Afghanistan",
+  "Albania",
+  "Algeria",
+  "Andorra",
+  "Angola",
+  "Antigua and Barbuda",
+  "Argentina",
+  "Armenia",
+  "Australia",
+  "Austria",
+  "Azerbaijan",
+  "Bahamas",
+  "Bahrain",
+  "Bangladesh",
+  "Barbados",
+  "Belarus",
+  "Belgium",
+  "Belize",
+  "Benin",
+  "Bhutan",
+  "Bolivia",
+  "Bosnia and Herzegovina",
+  "Botswana",
+  "Brazil",
+  "Brunei",
+  "Bulgaria",
+  "Burkina Faso",
+  "Burundi",
+  "Cambodia",
+  "Cameroon",
+  "Canada",
+  "Cape Verde",
+  "Central African Republic",
+  "Chad",
+  "Chile",
+  "China",
+  "Colombia",
+  "Comoros",
+  "Costa Rica",
+  "Croatia",
+  "Cuba",
+  "Cyprus",
+  "Czechia",
+  "Democratic Republic of the Congo",
+  "Denmark",
+  "Djibouti",
+  "Dominica",
+  "Dominican Republic",
+  "Ecuador",
+  "Egypt",
+  "El Salvador",
+  "Equatorial Guinea",
+  "Eritrea",
+  "Estonia",
+  "Eswatini",
+  "Ethiopia",
+  "Fiji",
+  "Finland",
+  "France",
+  "Gabon",
+  "Gambia",
+  "Georgia",
+  "Germany",
+  "Ghana",
+  "Greece",
+  "Grenada",
+  "Guatemala",
+  "Guinea",
+  "Guinea-Bissau",
+  "Guyana",
+  "Haiti",
+  "Honduras",
+  "Hungary",
+  "Iceland",
+  "India",
+  "Indonesia",
+  "Iran",
+  "Iraq",
+  "Ireland",
+  "Israel",
+  "Italy",
+  "Ivory Coast",
+  "Jamaica",
+  "Japan",
+  "Jordan",
+  "Kazakhstan",
+  "Kenya",
+  "Kiribati",
+  "Kosovo",
+  "Kuwait",
+  "Kyrgyzstan",
+  "Laos",
+  "Latvia",
+  "Lebanon",
+  "Lesotho",
+  "Liberia",
+  "Libya",
+  "Liechtenstein",
+  "Lithuania",
+  "Luxembourg",
+  "Madagascar",
+  "Malawi",
+  "Malaysia",
+  "Maldives",
+  "Mali",
+  "Malta",
+  "Marshall Islands",
+  "Mauritania",
+  "Mauritius",
+  "Mexico",
+  "Micronesia",
+  "Moldova",
+  "Monaco",
+  "Mongolia",
+  "Montenegro",
+  "Morocco",
+  "Mozambique",
+  "Myanmar",
+  "Namibia",
+  "Nauru",
+  "Nepal",
+  "Netherlands",
+  "New Zealand",
+  "Nicaragua",
+  "Niger",
+  "Nigeria",
+  "North Korea",
+  "North Macedonia",
+  "Norway",
+  "Oman",
+  "Pakistan",
+  "Palau",
+  "Palestine",
+  "Panama",
+  "Papua New Guinea",
+  "Paraguay",
+  "Peru",
+  "Philippines",
+  "Poland",
+  "Portugal",
+  "Qatar",
+  "Republic of the Congo",
+  "Romania",
+  "Russia",
+  "Rwanda",
+  "Saint Kitts and Nevis",
+  "Saint Lucia",
+  "Saint Vincent and the Grenadines",
+  "Samoa",
+  "San Marino",
+  "Sao Tome and Principe",
+  "Saudi Arabia",
+  "Senegal",
+  "Serbia",
+  "Seychelles",
+  "Sierra Leone",
+  "Singapore",
+  "Slovakia",
+  "Slovenia",
+  "Solomon Islands",
+  "Somalia",
+  "South Africa",
+  "South Korea",
+  "South Sudan",
+  "Spain",
+  "Sri Lanka",
+  "Sudan",
+  "Suriname",
+  "Sweden",
+  "Switzerland",
+  "Syria",
+  "Taiwan",
+  "Tajikistan",
+  "Tanzania",
+  "Thailand",
+  "Timor-Leste",
+  "Togo",
+  "Tonga",
+  "Trinidad and Tobago",
+  "Tunisia",
+  "Turkey",
+  "Turkmenistan",
+  "Tuvalu",
+  "Uganda",
+  "Ukraine",
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Uruguay",
+  "Uzbekistan",
+  "Vanuatu",
+  "Vatican City",
+  "Venezuela",
+  "Vietnam",
+  "Yemen",
+  "Zambia",
+  "Zimbabwe",
 ];
 
 const STEPS = [
@@ -156,6 +351,10 @@ const STEPS = [
 ];
 
 const MAX_IMAGE_SIZE = 1024 * 1024;
+
+/* ==========================================================
+   HELPERS
+   ========================================================== */
 
 function newId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -192,17 +391,16 @@ function makeDraft(
 
     currency: initial?.currency ?? "LKR",
 
-    ticketTiers:
-      initial?.ticketTiers?.length
-        ? initial.ticketTiers.map((tier) => ({ ...tier }))
-        : [
-            {
-              ...blankTier(),
-              price: initial?.price ?? 0,
-              capacity: initial?.capacity ?? 100,
-              name: "General Admission",
-            },
-          ],
+    ticketTiers: initial?.ticketTiers?.length
+      ? initial.ticketTiers.map((tier) => ({ ...tier }))
+      : [
+          {
+            ...blankTier(),
+            price: initial?.price ?? 0,
+            capacity: initial?.capacity ?? 100,
+            name: "General Admission",
+          },
+        ],
 
     admissionType: initial?.admissionType ?? "general",
     stagePosition: initial?.stagePosition ?? "",
@@ -221,9 +419,7 @@ function makeDraft(
   };
 }
 
-function readImage(
-  file: File
-): Promise<string> {
+function readImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -245,30 +441,27 @@ function readImage(
 
 function validateImage(file: File) {
   if (
-    !["image/jpeg", "image/png", "image/webp"].includes(
-      file.type
-    )
+    !["image/jpeg", "image/png", "image/webp"].includes(file.type)
   ) {
-    throw new Error(
-      "Please select a JPG, PNG or WebP image."
-    );
+    throw new Error("Please select a JPG, PNG or WebP image.");
   }
 
   if (file.size > MAX_IMAGE_SIZE) {
     throw new Error(
-      "For the local preview, each image must be under 1 MB. Larger files will be supported with backend storage."
+      "Each image must be under 1 MB for local preview."
     );
   }
 }
 
-function currencyAmount(
-  amount: number,
-  currency: string
-) {
+function currencyAmount(amount: number, currency: string) {
   return `${currency} ${amount.toLocaleString("en-US", {
     maximumFractionDigits: 2,
   })}`;
 }
+
+/* ==========================================================
+   REUSABLE FORM COMPONENTS
+   ========================================================== */
 
 function Field({
   label,
@@ -276,7 +469,7 @@ function Field({
   required = false,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
   required?: boolean;
 }) {
   return (
@@ -289,6 +482,58 @@ function Field({
     </label>
   );
 }
+
+/* Custom aligned dropdown */
+
+function SelectControl({
+  value,
+  onChange,
+  children,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+  ariaLabel: string;
+}) {
+  return (
+    <div
+      className="vef-select-wrap"
+      style={{ position: "relative", width: "100%" }}
+    >
+      <select
+        value={value}
+        aria-label={ariaLabel}
+        onChange={(event) => onChange(event.target.value)}
+        style={{
+          appearance: "none",
+          WebkitAppearance: "none",
+          width: "100%",
+          paddingRight: "42px",
+        }}
+      >
+        {children}
+      </select>
+
+      <ChevronDown
+        size={17}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          right: "14px",
+          top: "50%",
+          transform: "translateY(-50%)",
+          pointerEvents: "none",
+          color: "#9b8060",
+        }}
+      />
+    </div>
+  );
+}
+
+/* ==========================================================
+   MAIN EVENT FORM
+   ========================================================== */
 
 export default function EventForm({
   initialEvent,
@@ -307,6 +552,7 @@ export default function EventForm({
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     return () => {
@@ -322,6 +568,7 @@ export default function EventForm({
       ...current,
       [key]: value,
     }));
+
     setError("");
   };
 
@@ -329,24 +576,43 @@ export default function EventForm({
     id: string,
     patch: Partial<EventTicketTier>
   ) => {
-    update(
-      "ticketTiers",
-      draft.ticketTiers.map((tier) =>
+    setDraft((current) => ({
+      ...current,
+      ticketTiers: current.ticketTiers.map((tier) =>
         tier.id === id ? { ...tier, ...patch } : tier
-      )
-    );
+      ),
+    }));
+
+    setError("");
   };
 
   const removeTier = (id: string) => {
-    if (draft.ticketTiers.length <= 1) {
-      setError("At least one ticket category is required.");
-      return;
-    }
+    setDraft((current) => {
+      if (current.ticketTiers.length <= 1) {
+        return current;
+      }
 
-    update(
-      "ticketTiers",
-      draft.ticketTiers.filter((tier) => tier.id !== id)
-    );
+      return {
+        ...current,
+        ticketTiers: current.ticketTiers.filter(
+          (tier) => tier.id !== id
+        ),
+      };
+    });
+
+    setError("");
+  };
+
+  const addTier = () => {
+    setDraft((current) => ({
+      ...current,
+      ticketTiers: [
+        ...current.ticketTiers,
+        blankTier(),
+      ],
+    }));
+
+    setError("");
   };
 
   const uploadImage = async (
@@ -362,7 +628,9 @@ export default function EventForm({
 
     try {
       validateImage(file);
+
       const image = await readImage(file);
+
       update(field, image);
     } catch (uploadError) {
       setError(
@@ -375,6 +643,10 @@ export default function EventForm({
       event.target.value = "";
     }
   };
+
+  /* ========================================================
+     TICKET CALCULATIONS
+     ======================================================== */
 
   const enabledTiers = draft.ticketTiers.filter(
     (tier) => tier.enabled
@@ -389,27 +661,39 @@ export default function EventForm({
     ? Math.min(...enabledTiers.map((tier) => tier.price))
     : 0;
 
+  /* ========================================================
+     VALIDATION
+     ======================================================== */
+
   const validateStep = (index: number): string => {
     if (index === 0) {
-      if (!draft.title.trim()) return "Enter the event title.";
-      if (!draft.organizerId)
+      if (!draft.title.trim()) {
+        return "Enter the event title.";
+      }
+
+      if (!draft.organizerId) {
         return "Select an organizer.";
-      if (!draft.description.trim())
+      }
+
+      if (!draft.description.trim()) {
         return "Enter the event description.";
+      }
     }
 
     if (index === 1) {
-      if (!draft.country.trim() || !draft.city.trim())
-        return "Enter the event country and city.";
-      if (!draft.venue.trim())
-        return "Enter the venue.";
-      if (!draft.date || !draft.time)
-        return "Select the event date and start time.";
+      if (!draft.country.trim() || !draft.city.trim()) {
+        return "Select the country and enter the city.";
+      }
 
-      if (
-        draft.endDate &&
-        draft.endDate < draft.date
-      ) {
+      if (!draft.venue.trim()) {
+        return "Enter the venue.";
+      }
+
+      if (!draft.date || !draft.time) {
+        return "Select the event date and start time.";
+      }
+
+      if (draft.endDate && draft.endDate < draft.date) {
         return "End date cannot be before the start date.";
       }
 
@@ -418,24 +702,27 @@ export default function EventForm({
         draft.endTime &&
         draft.endTime <= draft.time
       ) {
-        return "End time must be after start time on the same day.";
+        return "End time must be after start time.";
       }
     }
 
     if (index === 2) {
-      if (!enabledTiers.length)
+      if (!enabledTiers.length) {
         return "Enable at least one ticket category.";
+      }
 
       const names = new Set<string>();
 
       for (const tier of draft.ticketTiers) {
-        if (!tier.name.trim())
+        if (!tier.name.trim()) {
           return "Enter a name for every ticket category.";
+        }
 
         const normalized = tier.name.trim().toLowerCase();
 
-        if (names.has(normalized))
+        if (names.has(normalized)) {
           return "Ticket category names must be unique.";
+        }
 
         names.add(normalized);
 
@@ -450,7 +737,7 @@ export default function EventForm({
           !Number.isInteger(tier.capacity) ||
           tier.capacity < 1
         ) {
-          return "Each ticket category needs a valid capacity.";
+          return "Each category needs a valid capacity.";
         }
 
         if (
@@ -480,11 +767,13 @@ export default function EventForm({
         return "Sales must close no later than the event start.";
       }
 
-      if (!draft.refundPolicy.trim())
+      if (!draft.refundPolicy.trim()) {
         return "Enter the event refund policy.";
+      }
 
-      if (!draft.terms.trim())
+      if (!draft.terms.trim()) {
         return "Enter the event terms and conditions.";
+      }
     }
 
     return "";
@@ -493,11 +782,13 @@ export default function EventForm({
   const validateAll = (): string => {
     for (const index of [0, 1, 2, 4]) {
       const message = validateStep(index);
+
       if (message) {
         setStep(index);
         return message;
       }
     }
+
     return "";
   };
 
@@ -510,21 +801,29 @@ export default function EventForm({
     }
 
     setError("");
+
     setStep((current) => Math.min(current + 1, 5));
   };
+
+  /* ========================================================
+     SAVE / PUBLISH
+     ======================================================== */
 
   const save = async (status: EventPublicationStatus) => {
     if (saving || uploading) return;
 
-    /*
-     * Drafts may be incomplete; publication requires
-     * complete event information.
-     */
     if (status === "Published") {
       const validationError = validateAll();
 
       if (validationError) {
         setError(validationError);
+        return;
+      }
+
+      if (!draft.bookingEnabled) {
+        setError(
+          "Enable ticket bookings before publishing this event."
+        );
         return;
       }
     }
@@ -569,8 +868,16 @@ export default function EventForm({
     }
   };
 
+  /* ========================================================
+     STEP CONTENT
+     ======================================================== */
+
   const stepContent = () => {
     switch (step) {
+      /* ----------------------------------------------------
+         STEP 1 — EVENT DETAILS
+         ---------------------------------------------------- */
+
       case 0:
         return (
           <div className="vef-grid">
@@ -584,30 +891,33 @@ export default function EventForm({
             </Field>
 
             <Field label="Event Category" required>
-              <select
+              <SelectControl
                 value={draft.category}
-                onChange={(e) => update("category", e.target.value)}
+                onChange={(value) => update("category", value)}
+                ariaLabel="Event category"
               >
                 {CATEGORIES.map((name) => (
                   <option key={name} value={name}>
                     {name}
                   </option>
                 ))}
-              </select>
+              </SelectControl>
             </Field>
 
             <Field label="Event Organizer" required>
-              <select
+              <SelectControl
                 value={draft.organizerId}
-                onChange={(e) => update("organizerId", e.target.value)}
+                onChange={(value) => update("organizerId", value)}
+                ariaLabel="Event organizer"
               >
                 <option value="">Select organizer</option>
+
                 {organizers.map((organizer) => (
                   <option key={organizer.id} value={organizer.id}>
                     {organizer.name}
                   </option>
                 ))}
-              </select>
+              </SelectControl>
             </Field>
 
             <div className="vef-wide">
@@ -615,7 +925,9 @@ export default function EventForm({
                 <textarea
                   rows={5}
                   value={draft.description}
-                  onChange={(e) => update("description", e.target.value)}
+                  onChange={(e) =>
+                    update("description", e.target.value)
+                  }
                   placeholder="Describe the event, attractions, performers and experience..."
                 />
               </Field>
@@ -627,23 +939,35 @@ export default function EventForm({
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
-                    onChange={(e) => void uploadImage(e, "imageUrl")}
+                    onChange={(e) =>
+                      void uploadImage(e, "imageUrl")
+                    }
                     disabled={uploading}
                   />
+
                   <ImagePlus size={27} />
+
                   <strong>Choose Event Banner</strong>
-                  <small>JPG, PNG, WebP — maximum 1 MB for local preview</small>
+
+                  <small>
+                    JPG, PNG, WebP — maximum 1 MB for local preview
+                  </small>
                 </label>
               </Field>
 
               {draft.imageUrl && (
                 <div className="vef-image-preview">
-                  <img src={draft.imageUrl} alt="Event banner preview" />
+                  <img
+                    src={draft.imageUrl}
+                    alt="Event banner preview"
+                  />
+
                   <button
                     type="button"
                     onClick={() => update("imageUrl", "")}
                   >
-                    <Trash2 size={15} /> Remove Banner
+                    <Trash2 size={15} />
+                    Remove Banner
                   </button>
                 </div>
               )}
@@ -651,22 +975,41 @@ export default function EventForm({
           </div>
         );
 
+      /* ----------------------------------------------------
+         STEP 2 — DATE & LOCATION
+         ---------------------------------------------------- */
+
       case 1:
         return (
           <div className="vef-grid">
             <Field label="Country" required>
-              <input
+              <SelectControl
                 value={draft.country}
-                onChange={(e) => update("country", e.target.value)}
-                placeholder="Sri Lanka"
-              />
+                onChange={(value) => update("country", value)}
+                ariaLabel="Select event country"
+              >
+                <option value="">Select Country</option>
+
+                {draft.country &&
+                  !COUNTRIES.includes(draft.country) && (
+                    <option value={draft.country}>
+                      {draft.country}
+                    </option>
+                  )}
+
+                {COUNTRIES.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
+              </SelectControl>
             </Field>
 
             <Field label="City / Region" required>
               <input
                 value={draft.city}
                 onChange={(e) => update("city", e.target.value)}
-                placeholder="Jaffna"
+                placeholder="Enter city or region"
               />
             </Field>
 
@@ -700,6 +1043,7 @@ export default function EventForm({
               <input
                 type="date"
                 value={draft.endDate}
+                min={draft.date || undefined}
                 onChange={(e) => update("endDate", e.target.value)}
               />
             </Field>
@@ -714,40 +1058,45 @@ export default function EventForm({
           </div>
         );
 
+      /* ----------------------------------------------------
+         STEP 3 — TICKET CATEGORIES
+         ---------------------------------------------------- */
+
       case 2:
         return (
           <div className="vef-tickets">
             <div className="vef-section-head">
               <div>
                 <h3>Ticket Categories</h3>
+
                 <p>
                   Create custom categories such as VVIP, VIP,
                   Fan Pit, Platinum, Gold and Silver.
                 </p>
               </div>
+
               <button
                 type="button"
                 className="vef-add-btn"
-                onClick={() =>
-                  update("ticketTiers", [
-                    ...draft.ticketTiers,
-                    blankTier(),
-                  ])
-                }
+                onClick={addTier}
               >
-                <Plus size={16} /> Add Category
+                <Plus size={16} />
+                Add Category
               </button>
             </div>
 
             <Field label="Ticket Currency">
-              <select
+              <SelectControl
                 value={draft.currency}
-                onChange={(e) => update("currency", e.target.value)}
+                onChange={(value) => update("currency", value)}
+                ariaLabel="Ticket currency"
               >
                 {CURRENCIES.map((currency) => (
-                  <option key={currency}>{currency}</option>
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
                 ))}
-              </select>
+              </SelectControl>
             </Field>
 
             {draft.ticketTiers.map((tier, index) => (
@@ -773,13 +1122,18 @@ export default function EventForm({
                     <input
                       value={tier.name}
                       onChange={(e) =>
-                        updateTier(tier.id, { name: e.target.value })
+                        updateTier(tier.id, {
+                          name: e.target.value,
+                        })
                       }
                       placeholder="VVIP, Gold, Fan Pit..."
                     />
                   </Field>
 
-                  <Field label={`Price (${draft.currency})`} required>
+                  <Field
+                    label={`Price (${draft.currency})`}
+                    required
+                  >
                     <input
                       type="number"
                       min="0"
@@ -846,6 +1200,7 @@ export default function EventForm({
                       })
                     }
                   />
+
                   Available for booking
                 </label>
               </div>
@@ -854,8 +1209,11 @@ export default function EventForm({
             <div className="vef-total">
               <div>
                 <span>Total Ticket Capacity</span>
-                <strong>{totalCapacity.toLocaleString()}</strong>
+                <strong>
+                  {totalCapacity.toLocaleString()}
+                </strong>
               </div>
+
               <div>
                 <span>Starting Price</span>
                 <strong>
@@ -866,25 +1224,41 @@ export default function EventForm({
           </div>
         );
 
+      /* ----------------------------------------------------
+         STEP 4 — VENUE & SEATING
+         ---------------------------------------------------- */
+
       case 3:
         return (
           <div className="vef-grid">
             <div className="vef-wide">
               <Field label="Admission / Seating Type">
-                <select
+                <SelectControl
                   value={draft.admissionType}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     update(
                       "admissionType",
-                      e.target.value as VenueAdmissionType
+                      value as VenueAdmissionType
                     )
                   }
+                  ariaLabel="Admission and seating type"
                 >
-                  <option value="general">General Admission</option>
-                  <option value="zones">Ticket Zones / Areas</option>
-                  <option value="reserved">Reserved Seats</option>
-                  <option value="stadium">Stadium / Stands</option>
-                </select>
+                  <option value="general">
+                    General Admission
+                  </option>
+
+                  <option value="zones">
+                    Ticket Zones / Areas
+                  </option>
+
+                  <option value="reserved">
+                    Reserved Seats
+                  </option>
+
+                  <option value="stadium">
+                    Stadium / Stands
+                  </option>
+                </SelectControl>
               </Field>
             </div>
 
@@ -899,8 +1273,11 @@ export default function EventForm({
                     }
                     disabled={uploading}
                   />
+
                   <UploadCloud size={29} />
+
                   <strong>Choose Venue Layout Image</strong>
+
                   <small>
                     Show the stage, sections and ticket areas
                     — JPG, PNG or WebP, under 1 MB
@@ -914,6 +1291,7 @@ export default function EventForm({
                     src={draft.venueLayoutImage}
                     alt="Venue seating layout"
                   />
+
                   <button
                     type="button"
                     onClick={() =>
@@ -928,11 +1306,12 @@ export default function EventForm({
             </div>
 
             <Field label="Stage Position">
-              <select
+              <SelectControl
                 value={draft.stagePosition}
-                onChange={(e) =>
-                  update("stagePosition", e.target.value)
+                onChange={(value) =>
+                  update("stagePosition", value)
                 }
+                ariaLabel="Stage position"
               >
                 <option value="">Not Specified</option>
                 <option value="top">Top</option>
@@ -940,7 +1319,7 @@ export default function EventForm({
                 <option value="left">Left</option>
                 <option value="right">Right</option>
                 <option value="center">Center</option>
-              </select>
+              </SelectControl>
             </Field>
 
             <div className="vef-wide">
@@ -958,6 +1337,7 @@ export default function EventForm({
 
             <div className="vef-info vef-wide">
               <Map size={19} />
+
               <p>
                 The uploaded image will be a visual seating map.
                 Interactive zone clicking and exact numbered seat
@@ -967,6 +1347,10 @@ export default function EventForm({
             </div>
           </div>
         );
+
+      /* ----------------------------------------------------
+         STEP 5 — BOOKING SETTINGS
+         ---------------------------------------------------- */
 
       case 4:
         return (
@@ -992,7 +1376,10 @@ export default function EventForm({
             </Field>
 
             <div className="vef-wide">
-              <Field label="Refund / Cancellation Policy" required>
+              <Field
+                label="Refund / Cancellation Policy"
+                required
+              >
                 <textarea
                   rows={4}
                   value={draft.refundPolicy}
@@ -1005,7 +1392,10 @@ export default function EventForm({
             </div>
 
             <div className="vef-wide">
-              <Field label="Event Terms & Conditions" required>
+              <Field
+                label="Event Terms & Conditions"
+                required
+              >
                 <textarea
                   rows={4}
                   value={draft.terms}
@@ -1026,27 +1416,34 @@ export default function EventForm({
                     update("bookingEnabled", e.target.checked)
                   }
                 />
+
                 Enable ticket bookings for this event
               </label>
             </div>
 
             <div className="vef-info vef-wide">
               <Info size={19} />
+
               <p>
                 A successful payment must be verified by the
-                backend before a confirmed booking or QR
-                ticket is issued. The admin form does not
-                create customer tickets.
+                backend before a confirmed booking or QR ticket
+                is issued. The admin form does not create
+                customer tickets.
               </p>
             </div>
           </div>
         );
+
+      /* ----------------------------------------------------
+         STEP 6 — REVIEW & PUBLISH
+         ---------------------------------------------------- */
 
       default:
         return (
           <div className="vef-review">
             <div className="vef-review-title">
               <CheckCircle2 size={23} />
+
               <div>
                 <h3>Review Your Event</h3>
                 <p>Check the details before publishing.</p>
@@ -1066,50 +1463,73 @@ export default function EventForm({
                 <span>Event</span>
                 <strong>{draft.title || "Not entered"}</strong>
               </div>
+
               <div>
                 <span>Category</span>
                 <strong>{draft.category}</strong>
               </div>
+
               <div>
                 <span>Location</span>
                 <strong>
                   {draft.city || "City"}, {draft.country}
                 </strong>
               </div>
+
+              <div>
+                <span>Venue</span>
+                <strong>{draft.venue || "Not entered"}</strong>
+              </div>
+
               <div>
                 <span>Event Date</span>
                 <strong>
                   {draft.date || "Not set"} {draft.time}
                 </strong>
               </div>
+
               <div>
                 <span>Ticket Categories</span>
                 <strong>{enabledTiers.length}</strong>
               </div>
+
               <div>
                 <span>Total Capacity</span>
-                <strong>{totalCapacity.toLocaleString()}</strong>
+                <strong>
+                  {totalCapacity.toLocaleString()}
+                </strong>
               </div>
+
               <div>
                 <span>Starting Price</span>
                 <strong>
                   {currencyAmount(minimumPrice, draft.currency)}
                 </strong>
               </div>
+
               <div>
                 <span>Seating Type</span>
                 <strong>{draft.admissionType}</strong>
+              </div>
+
+              <div>
+                <span>Booking Status</span>
+                <strong>
+                  {draft.bookingEnabled ? "Enabled" : "Disabled"}
+                </strong>
               </div>
             </div>
 
             <div className="vef-review-tiers">
               <h4>Ticket Categories</h4>
+
               {draft.ticketTiers.map((tier) => (
                 <div key={tier.id}>
                   <span>
-                    {tier.name || "Unnamed"}{" "}
-                    {!tier.enabled && "(Disabled)"}
+                    {tier.name || "Unnamed"}
+                    {!tier.enabled && " (Disabled)"}
                   </span>
+
                   <strong>
                     {currencyAmount(tier.price, draft.currency)}
                     {" · "}
@@ -1122,6 +1542,7 @@ export default function EventForm({
             {draft.venueLayoutImage && (
               <div className="vef-review-layout">
                 <h4>Venue Map</h4>
+
                 <img
                   src={draft.venueLayoutImage}
                   alt="Uploaded venue layout"
@@ -1133,12 +1554,21 @@ export default function EventForm({
     }
   };
 
+  /* ========================================================
+     FORM SUBMISSION
+     ======================================================== */
+
   const submitForm = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (step < 5) {
       next();
     }
   };
+
+  /* ========================================================
+     MAIN RENDER
+     ======================================================== */
 
   return (
     <div
@@ -1157,18 +1587,24 @@ export default function EventForm({
           initialEvent?.id ? "Edit Event" : "Create New Event"
         }
       >
+        {/* HEADER */}
+
         <header className="vef-header">
           <div>
             <p className="vef-eyebrow">
               <CalendarDays size={14} />
               VIZHATICKETS EVENT MANAGEMENT
             </p>
+
             <h2>
               {initialEvent?.id
                 ? "Edit Event"
                 : "Create New Event"}
             </h2>
-            <p>Configure your event, ticket tiers and venue.</p>
+
+            <p>
+              Configure your event, ticket tiers and venue.
+            </p>
           </div>
 
           <button
@@ -1181,7 +1617,12 @@ export default function EventForm({
           </button>
         </header>
 
-        <div className="vef-progress" aria-label="Event setup steps">
+        {/* PROGRESS NAVIGATION */}
+
+        <div
+          className="vef-progress"
+          aria-label="Event setup steps"
+        >
           {STEPS.map((label, index) => (
             <button
               type="button"
@@ -1197,17 +1638,28 @@ export default function EventForm({
               }}
             >
               <span>
-                {step > index ? <Check size={14} /> : index + 1}
+                {step > index ? (
+                  <Check size={14} />
+                ) : (
+                  index + 1
+                )}
               </span>
+
               <small>{label}</small>
             </button>
           ))}
         </div>
 
-        <form className="vef-form" onSubmit={submitForm}>
+        {/* FORM */}
+
+        <form
+          className="vef-form"
+          onSubmit={submitForm}
+        >
           <div className="vef-body" key={step}>
             <div className="vef-content-heading">
               <h3>{STEPS[step]}</h3>
+
               <p>
                 Step {step + 1} of {STEPS.length}
               </p>
@@ -1222,6 +1674,8 @@ export default function EventForm({
               </div>
             )}
           </div>
+
+          {/* FOOTER */}
 
           <footer className="vef-footer">
             <div className="vef-footer-left">

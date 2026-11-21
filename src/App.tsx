@@ -15,55 +15,14 @@ import {
 } from "react-router-dom";
 
 /* ==========================================================
-   VIZHATICKETS — MAIN APPLICATION ROUTER
-
-   React + Vite + TypeScript + React Router
-
-   FEATURES:
-   ----------------------------------------------------------
-   - Existing customer website preserved
-   - Existing customer login / register preserved
-   - Global location filtering preserved
-   - Event listing and event details preserved
-   - Category routes preserved
-   - Organizer request form preserved
-   - Customer account routes preserved
-   - My Tickets and My Bookings preserved
-   - Checkout and booking success preserved
-   - Development-only Admin Dashboard
-   - AdminGuard integrated
-   - Shared login interface for customer and admin
-   - Automatic scroll to top
-   - Global authentication modal preserved
-
-   SECURITY:
-   ----------------------------------------------------------
-   Admin preview access is available ONLY in Vite
-   development mode.
-
-   AdminGuard checks the mock administrator session.
-
-   Frontend session checks are NOT real security.
-
-   Production authorization will require backend
-   authentication and role verification.
-
-   ========================================================== */
-
-/* ==========================================================
    PUBLIC WEBSITE PAGES
    ========================================================== */
 
 import HomePage from "./pages/HomePage";
-
 import AboutPage from "./pages/AboutPage";
-
 import EventsPage from "./pages/EventsPage";
-
 import EventDetailsPage from "./pages/EventDetailsPage";
-
 import CategoriesPage from "./pages/CategoriesPage";
-
 import CategoryDetailPage from "./pages/CategoryDetailPage";
 
 /* ==========================================================
@@ -77,9 +36,7 @@ import OrganizerRequestPage from "./pages/OrganizerRequestPage";
    ========================================================== */
 
 import LoginPage from "./pages/LoginPage";
-
 import RegisterPage from "./pages/RegisterPage";
-
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
 /* ==========================================================
@@ -87,9 +44,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
    ========================================================== */
 
 import CustomerDashboard from "./pages/CustomerDashboard";
-
 import MyTicketsPage from "./pages/MyTicketsPage";
-
 import MyBookingsPage from "./pages/MyBookingsPage";
 
 /* ==========================================================
@@ -97,8 +52,25 @@ import MyBookingsPage from "./pages/MyBookingsPage";
    ========================================================== */
 
 import CheckoutPage from "./pages/CheckoutPage";
-
 import BookingSuccessPage from "./pages/BookingSuccessPage";
+
+/* ==========================================================
+   LEGAL & POLICY PAGES
+
+   Existing files:
+   src/pages/TermsPage.tsx
+   src/pages/PrivacyPolicyPage.tsx
+
+   These pages are lazy-loaded.
+   ========================================================== */
+
+const TermsPage = lazy(
+  () => import("./pages/TermsPage")
+);
+
+const PrivacyPolicyPage = lazy(
+  () => import("./pages/PrivacyPolicyPage")
+);
 
 /* ==========================================================
    CUSTOMER SESSION
@@ -128,24 +100,12 @@ import {
 
 /* ==========================================================
    ADMIN ROUTE GUARD
-
-   Checks the development administrator preview session.
-
-   The existing customer session must NOT be used
-   to authorize administrator dashboard access.
-
    ========================================================== */
 
 import AdminGuard from "./admin/AdminGuard";
 
 /* ==========================================================
    ADMIN DASHBOARD — DEVELOPMENT ONLY
-
-   Lazy loading keeps the Admin Dashboard separate
-   from normal public website navigation.
-
-   This preview is not registered in production.
-
    ========================================================== */
 
 const AdminApp = import.meta.env.DEV
@@ -153,10 +113,62 @@ const AdminApp = import.meta.env.DEV
   : null;
 
 /* ==========================================================
+   SHARED PAGE LOADING COMPONENT
+   ========================================================== */
+
+function PageLoading({
+  title = "VizhaTickets",
+  message = "Loading page...",
+}: {
+  title?: string;
+  message?: string;
+}) {
+  return (
+    <div
+      className="
+        flex min-h-screen w-full
+        flex-col items-center
+        justify-center gap-4
+        bg-[#fffaf2] px-6
+        text-center
+      "
+    >
+      <div
+        className="
+          h-10 w-10 animate-spin
+          rounded-full border-4
+          border-[#f0dfc9]
+          border-t-[#c9790b]
+        "
+      />
+
+      <div>
+        <h2
+          className="
+            text-lg font-bold
+            text-[#30251b]
+          "
+        >
+          {title}
+        </h2>
+
+        <p
+          className="
+            mt-2 text-sm
+            text-[#958473]
+          "
+        >
+          {message}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================
    SCROLL TO TOP
 
    Runs whenever the URL pathname changes.
-
    ========================================================== */
 
 function ScrollToTop() {
@@ -166,7 +178,7 @@ function ScrollToTop() {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: "instant",
+      behavior: "auto",
     });
   }, [pathname]);
 
@@ -181,10 +193,7 @@ function ScrollToTop() {
    - /my-tickets
    - /my-bookings
 
-   Existing customer session behavior is preserved.
-
-   This is frontend demo protection only.
-
+   Frontend session protection only.
    ========================================================== */
 
 interface CustomerRouteProps {
@@ -215,9 +224,8 @@ function CustomerRoute({
 
    Both routes use OrganizerRequestPage.
 
-   The pathname is passed as the component key to
-   reset the enquiry form when changing routes.
-
+   The pathname key resets the enquiry form when
+   switching between routes.
    ========================================================== */
 
 function EnquiryPageRoute() {
@@ -233,22 +241,10 @@ function EnquiryPageRoute() {
 /* ==========================================================
    ADMIN PREVIEW ROUTE
 
-   This component loads AdminApp.
-
-   Authentication is handled by the AdminGuard
-   wrapping this component in AppRoutes.
-
-   IMPORTANT:
-   The development admin session is not suitable
-   for real production authorization.
-
+   Development-only Admin Dashboard.
    ========================================================== */
 
 function AdminPreviewRoute() {
-  /* ================================================
-     BLOCK ADMIN PREVIEW OUTSIDE DEVELOPMENT
-     ================================================ */
-
   if (
     !import.meta.env.DEV ||
     AdminApp === null
@@ -261,65 +257,13 @@ function AdminPreviewRoute() {
     );
   }
 
-  /* ================================================
-     LOAD ADMIN DASHBOARD
-     ================================================ */
-
   return (
     <Suspense
       fallback={
-        <div
-          className="
-            flex
-            min-h-screen
-            w-full
-            flex-col
-            items-center
-            justify-center
-            gap-4
-            bg-[#f6f8fb]
-            px-6
-            text-center
-          "
-        >
-          {/* LOADING SPINNER */}
-
-          <div
-            className="
-              h-10
-              w-10
-              animate-spin
-              rounded-full
-              border-4
-              border-[#f0dfc9]
-              border-t-[#c9790b]
-            "
-          />
-
-          {/* LOADING MESSAGE */}
-
-          <div>
-            <h2
-              className="
-                text-lg
-                font-bold
-                text-[#252b35]
-              "
-            >
-              VizhaTickets Admin
-            </h2>
-
-            <p
-              className="
-                mt-2
-                text-sm
-                text-[#86909e]
-              "
-            >
-              Loading dashboard...
-            </p>
-          </div>
-        </div>
+        <PageLoading
+          title="VizhaTickets Admin"
+          message="Loading dashboard..."
+        />
       }
     >
       <AdminApp />
@@ -334,6 +278,7 @@ function AdminPreviewRoute() {
 function AppRoutes() {
   return (
     <Routes>
+
       {/* ====================================================
           HOME PAGE
           ==================================================== */}
@@ -354,8 +299,6 @@ function AppRoutes() {
 
       {/* ====================================================
           EVENTS LISTING
-
-          Supports global country/city filtering.
           ==================================================== */}
 
       <Route
@@ -399,8 +342,6 @@ function AppRoutes() {
 
       {/* ====================================================
           CONTACT US
-
-          Uses the existing combined enquiry form.
           ==================================================== */}
 
       <Route
@@ -410,9 +351,6 @@ function AppRoutes() {
 
       {/* ====================================================
           ORGANIZER REQUEST
-
-          Public enquiry submission.
-          Organizer login is not required.
           ==================================================== */}
 
       <Route
@@ -421,12 +359,7 @@ function AppRoutes() {
       />
 
       {/* ====================================================
-          CUSTOMER LOGIN PAGE
-
-          Existing login page preserved.
-
-          The shared modal also handles development
-          administrator preview sign-in.
+          CUSTOMER LOGIN
           ==================================================== */}
 
       <Route
@@ -454,8 +387,6 @@ function AppRoutes() {
 
       {/* ====================================================
           CUSTOMER PROFILE
-
-          Customer authentication required.
           ==================================================== */}
 
       <Route
@@ -467,11 +398,7 @@ function AppRoutes() {
         }
       />
 
-      {/* ====================================================
-          CUSTOMER DASHBOARD ALIAS
-
-          /dashboard -> /profile
-          ==================================================== */}
+      {/* CUSTOMER DASHBOARD ALIAS */}
 
       <Route
         path="/dashboard"
@@ -485,8 +412,6 @@ function AppRoutes() {
 
       {/* ====================================================
           MY TICKETS
-
-          Customer authentication required.
           ==================================================== */}
 
       <Route
@@ -500,8 +425,6 @@ function AppRoutes() {
 
       {/* ====================================================
           MY BOOKINGS
-
-          Customer authentication required.
           ==================================================== */}
 
       <Route
@@ -515,11 +438,6 @@ function AppRoutes() {
 
       {/* ====================================================
           CHECKOUT
-
-          Existing ticket booking flow preserved.
-
-          Customer sign-in requirements are handled
-          by the existing checkout components.
           ==================================================== */}
 
       <Route
@@ -529,8 +447,6 @@ function AppRoutes() {
 
       {/* ====================================================
           BOOKING SUCCESS
-
-          Booking confirmation and group QR display.
           ==================================================== */}
 
       <Route
@@ -539,21 +455,67 @@ function AppRoutes() {
       />
 
       {/* ====================================================
+          TERMS & CONDITIONS
+
+          Public page.
+          No login required.
+          ==================================================== */}
+
+      <Route
+        path="/terms-and-conditions"
+        element={
+          <Suspense
+            fallback={
+              <PageLoading
+                message="Loading Terms & Conditions..."
+              />
+            }
+          >
+            <TermsPage />
+          </Suspense>
+        }
+      />
+
+      {/* TERMS SHORT URL */}
+
+      <Route
+        path="/terms"
+        element={
+          <Navigate
+            to="/terms-and-conditions"
+            replace
+          />
+        }
+      />
+
+      {/* ====================================================
+          PRIVACY POLICY
+
+          Public page.
+          No login required.
+          ==================================================== */}
+
+      <Route
+        path="/privacy-policy"
+        element={
+          <Suspense
+            fallback={
+              <PageLoading
+                message="Loading Privacy Policy..."
+              />
+            }
+          >
+            <PrivacyPolicyPage />
+          </Suspense>
+        }
+      />
+
+      {/* ====================================================
           ADMIN DASHBOARD
 
-          DEVELOPMENT MODE ONLY
+          Development mode only.
 
-          The shared LoginModal verifies the fictional
-          development administrator credentials and
-          starts a demo admin preview session.
-
-          AdminGuard then checks that session.
-
-          If the session is missing or expired,
-          the visitor is redirected to the homepage.
-
-          No separate admin login page is required.
-
+          AdminGuard protects the admin preview.
           ==================================================== */}
 
       {import.meta.env.DEV && (
@@ -569,9 +531,6 @@ function AppRoutes() {
 
       {/* ====================================================
           FALLBACK ROUTE
-
-          Unknown URLs return to the homepage.
-
           ==================================================== */}
 
       <Route
@@ -583,6 +542,7 @@ function AppRoutes() {
           />
         }
       />
+
     </Routes>
   );
 }
@@ -590,25 +550,14 @@ function AppRoutes() {
 /* ==========================================================
    MAIN APPLICATION
 
-   PROVIDER STRUCTURE:
+   PROVIDER STRUCTURE
 
    BrowserRouter
-     |
-     +-- LocationProvider
-           |
-           +-- AuthModalProvider
-                 |
-                 +-- ScrollToTop
-                 |
-                 +-- AppRoutes
-                 |     |
-                 |     +-- Public Pages
-                 |     +-- Customer Pages
-                 |     +-- AdminGuard
-                 |           |
-                 |           +-- Admin Dashboard
-                 |
-                 +-- AuthModal
+     └── LocationProvider
+          └── AuthModalProvider
+               ├── ScrollToTop
+               ├── AppRoutes
+               └── AuthModal
 
    ========================================================== */
 
@@ -617,17 +566,19 @@ export default function App() {
     <BrowserRouter>
       <LocationProvider>
         <AuthModalProvider>
+
           {/* AUTOMATIC SCROLL RESTORATION */}
 
           <ScrollToTop />
 
-          {/* CUSTOMER / ADMIN APPLICATION ROUTES */}
+          {/* APPLICATION ROUTES */}
 
           <AppRoutes />
 
-          {/* SHARED LOGIN AND REGISTRATION MODALS */}
+          {/* SHARED AUTHENTICATION MODAL */}
 
           <AuthModal />
+
         </AuthModalProvider>
       </LocationProvider>
     </BrowserRouter>
